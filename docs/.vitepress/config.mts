@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: '潘天峰的技术主页',
+  title: '潘天峰的主页',
   description: 'UE Gameplay / AI / Tools / Engine Notes',
   base: '/',
   cleanUrls: true,
@@ -23,8 +23,8 @@ export default defineConfig({
           text: 'UE 源码笔记',
           items: [
             { text: 'UE 笔记总览', link: '/ue/' },
-            { text: 'CharacterMovement 源码阅读', link: '/ue/character-movement' },
-            { text: 'AI Perception 源码阅读', link: '/ue/ai-perception' }
+            { text: 'CharacterMovement 源码阅读', link: '/ue/character-movement/' },
+            { text: 'AI Perception 源码阅读', link: '/ue/ai-perception/' }
           ]
         }
       ],
@@ -34,7 +34,7 @@ export default defineConfig({
           text: '项目复盘',
           items: [
             { text: '项目总览', link: '/projects/' },
-            { text: '机甲 PVE AI 自动跑测', link: '/projects/mech-pve-ai' }
+            { text: '机甲 PVE AI 自动跑测', link: '/projects/mech-pve-ai/' }
           ]
         }
       ]

@@ -103,8 +103,8 @@ VitePress 使用文件路由，Markdown 文件路径会映射成网页路径。
 | `docs/index.md` | `/` |
 | `docs/about.md` | `/about` |
 | `docs/ue/index.md` | `/ue/` |
-| `docs/ue/character-movement/index.md` | `/ue/character-movement` |
-| `docs/projects/mech-pve-ai/index.md` | `/projects/mech-pve-ai` |
+| `docs/ue/character-movement/index.md` | `/ue/character-movement/` |
+| `docs/projects/mech-pve-ai/index.md` | `/projects/mech-pve-ai/` |
 
 例如：
 
@@ -115,7 +115,7 @@ docs/ue/uobject-source/index.md
 对应：
 
 ```text
-https://fengisking.github.io/ue/uobject-source
+https://fengisking.github.io/ue/uobject-source/
 ```
 
 ---
@@ -163,7 +163,7 @@ docs/.vitepress/config.mts
 4. 在 UE 侧边栏里增加一项：
 
 ```ts
-{ text: 'UObject 源码阅读', link: '/ue/uobject-source' },
+{ text: 'UObject 源码阅读', link: '/ue/uobject-source/' },
 ```
 
 ---
@@ -182,13 +182,13 @@ docs/projects/gameplay-autotest/image/
 2. 对应网页：
 
 ```text
-https://fengisking.github.io/projects/gameplay-autotest
+https://fengisking.github.io/projects/gameplay-autotest/
 ```
 
 3. 在 `docs/.vitepress/config.mts` 的 `/projects/` 侧边栏里增加：
 
 ```ts
-{ text: 'Gameplay 自动跑测框架', link: '/projects/gameplay-autotest' },
+{ text: 'Gameplay 自动跑测框架', link: '/projects/gameplay-autotest/' },
 ```
 
 ---
@@ -212,7 +212,7 @@ docs/ue/uobject-source/
 2. 删除 `docs/.vitepress/config.mts` 里对应侧边栏：
 
 ```ts
-{ text: 'UObject 源码阅读', link: '/ue/uobject-source' }
+{ text: 'UObject 源码阅读', link: '/ue/uobject-source/' }
 ```
 
 否则左侧目录里会出现 404 链接。
@@ -242,8 +242,8 @@ docs/index.md
 
 ## UE 文章
 
-- [UE CharacterMovement 源码阅读](/ue/character-movement)
-- [UE AI Perception 死亡复活感知问题](/ue/ai-perception)
+- [UE CharacterMovement 源码阅读](/ue/character-movement/)
+- [UE AI Perception 死亡复活感知问题](/ue/ai-perception/)
 ```
 
 ---
@@ -276,7 +276,7 @@ sidebar: {
       text: 'UE 源码笔记',
       items: [
         { text: 'UE 笔记总览', link: '/ue/' },
-        { text: 'CharacterMovement 源码阅读', link: '/ue/character-movement' }
+        { text: 'CharacterMovement 源码阅读', link: '/ue/character-movement/' }
       ]
     }
   ]

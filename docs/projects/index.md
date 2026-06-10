@@ -4,4 +4,4 @@
 
 ## 文章
 
-- [机甲 PVE AI 自动跑测设计](/projects/mech-pve-ai)
+- [机甲 PVE AI 自动跑测设计](/projects/mech-pve-ai/)
