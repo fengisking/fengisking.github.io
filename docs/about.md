@@ -12,4 +12,4 @@ UE Gameplay / AI / Tools 方向开发者。
 
 ## 链接
 
-- GitHub: https://github.com/pantianfeng
+- 邮箱：940989466@qq.com

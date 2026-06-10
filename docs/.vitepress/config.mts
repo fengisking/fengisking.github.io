@@ -24,9 +24,7 @@ export default defineConfig({
           items: [
             { text: 'UE 笔记总览', link: '/ue/' },
             { text: 'CharacterMovement 源码阅读', link: '/ue/character-movement' },
-            { text: 'AI Perception 源码阅读', link: '/ue/ai-perception' },
-            { text: 'Behavior Tree 设计复盘', link: '/ue/behavior-tree' },
-            { text: '打包与动态资源', link: '/ue/package-assets' }
+            { text: 'AI Perception 源码阅读', link: '/ue/ai-perception' }
           ]
         }
       ],
@@ -36,16 +34,11 @@ export default defineConfig({
           text: '项目复盘',
           items: [
             { text: '项目总览', link: '/projects/' },
-            { text: '机甲 PVE AI 自动跑测', link: '/projects/mech-pve-ai' },
-            { text: 'UE 工具链复盘', link: '/projects/ue-tools' }
+            { text: '机甲 PVE AI 自动跑测', link: '/projects/mech-pve-ai' }
           ]
         }
       ]
     },
-
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/pantianfeng' }
-    ],
 
     search: {
       provider: 'local'

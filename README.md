@@ -51,19 +51,17 @@ fengisking.github.io/
 │  ├─ about.md
 │  ├─ ue/
 │  │  ├─ index.md
-│  │  ├─ character-movement.md
-│  │  ├─ ai-perception.md
-│  │  ├─ behavior-tree.md
-│  │  └─ package-assets.md
+│  │  ├─ character-movement/
+│  │  │  ├─ index.md
+│  │  │  └─ image/
+│  │  └─ ai-perception/
+│  │     ├─ index.md
+│  │     └─ image/
 │  ├─ projects/
 │  │  ├─ index.md
-│  │  ├─ mech-pve-ai.md
-│  │  └─ ue-tools.md
-│  ├─ public/
-│  │  └─ images/
-│  │     ├─ ue/
-│  │     ├─ projects/
-│  │     └─ profile/
+│  │  └─ mech-pve-ai/
+│  │     ├─ index.md
+│  │     └─ image/
 │  └─ .vitepress/
 │     └─ config.mts
 ├─ .github/
@@ -81,14 +79,15 @@ fengisking.github.io/
 
 | 文件 / 目录 | 含义 | 常见修改场景 |
 |---|---|---|
-| `docs/index.md` | 网站首页 | 改个人简介、精选文章、项目入口、联系方式 |
+| `docs/index.md` | 网站首页 | 改主页标题、UE 文章入口、项目入口、联系方式 |
 | `docs/about.md` | 关于我页面 | 改自我介绍、技术栈、经历概览 |
 | `docs/ue/index.md` | UE 笔记栏目首页 | 改 UE 文章索引、源码阅读路线 |
-| `docs/ue/*.md` | UE 技术文章 | 新增或修改 UE 源码、AI、3C、打包、性能文章 |
+| `docs/ue/<article>/index.md` | UE 技术文章正文 | 新增或修改 UE 源码、AI、3C、打包、性能文章 |
+| `docs/ue/<article>/image/` | 单篇 UE 文章图片 | 放该文章自己的截图、调用栈图、流程图 |
 | `docs/projects/index.md` | 项目复盘栏目首页 | 改项目复盘索引 |
-| `docs/projects/*.md` | 项目复盘文章 | 写机甲 PVE、工具链、自动跑测等项目复盘 |
-| `docs/public/images/` | 图片资源目录 | 放截图、调用栈图、架构图、头像 |
-| `docs/.vitepress/config.mts` | VitePress 配置 | 改顶部导航、左侧目录、站点标题、GitHub 链接 |
+| `docs/projects/<article>/index.md` | 项目复盘文章正文 | 写机甲 PVE、工具链、自动跑测等项目复盘 |
+| `docs/projects/<article>/image/` | 单篇项目文章图片 | 放该文章自己的架构图、截图、复盘图 |
+| `docs/.vitepress/config.mts` | VitePress 配置 | 改顶部导航、左侧目录、站点标题、搜索和页脚 |
 | `.github/workflows/deploy.yml` | GitHub Actions 发布配置 | 平时基本不用改 |
 | `package.json` | npm 脚本和依赖 | 平时基本不用改 |
 | `.gitignore` | Git 忽略规则 | 增加不想提交的本地文件 |
@@ -104,13 +103,13 @@ VitePress 使用文件路由，Markdown 文件路径会映射成网页路径。
 | `docs/index.md` | `/` |
 | `docs/about.md` | `/about` |
 | `docs/ue/index.md` | `/ue/` |
-| `docs/ue/character-movement.md` | `/ue/character-movement` |
-| `docs/projects/mech-pve-ai.md` | `/projects/mech-pve-ai` |
+| `docs/ue/character-movement/index.md` | `/ue/character-movement` |
+| `docs/projects/mech-pve-ai/index.md` | `/projects/mech-pve-ai` |
 
 例如：
 
 ```text
-docs/ue/uobject-source.md
+docs/ue/uobject-source/index.md
 ```
 
 对应：
@@ -130,7 +129,8 @@ https://fengisking.github.io/ue/uobject-source
 1. 新建文件：
 
 ```text
-docs/ue/uobject-source.md
+docs/ue/uobject-source/index.md
+docs/ue/uobject-source/image/
 ```
 
 2. 写入内容：
@@ -175,7 +175,8 @@ docs/.vitepress/config.mts
 1. 新建文件：
 
 ```text
-docs/projects/gameplay-autotest.md
+docs/projects/gameplay-autotest/index.md
+docs/projects/gameplay-autotest/image/
 ```
 
 2. 对应网页：
@@ -197,21 +198,21 @@ https://fengisking.github.io/projects/gameplay-autotest
 例如删除：
 
 ```text
-docs/ue/package-assets.md
+docs/ue/uobject-source/
 ```
 
 需要做两件事：
 
-1. 删除文件：
+1. 删除目录：
 
 ```text
-docs/ue/package-assets.md
+docs/ue/uobject-source/
 ```
 
 2. 删除 `docs/.vitepress/config.mts` 里对应侧边栏：
 
 ```ts
-{ text: '打包与动态资源', link: '/ue/package-assets' }
+{ text: 'UObject 源码阅读', link: '/ue/uobject-source' }
 ```
 
 否则左侧目录里会出现 404 链接。
@@ -229,7 +230,7 @@ docs/index.md
 常见修改：
 
 - 改个人简介
-- 改精选文章
+- 改 UE 文章入口
 - 改项目复盘
 - 增加联系方式
 - 增加简历下载链接
@@ -237,13 +238,10 @@ docs/index.md
 示例：
 
 ```md
-# 潘天峰的技术主页
+# 潘天峰的主页
 
-UE Gameplay / AI / Tools / Engine Notes
+## UE 文章
 
-## 精选文章
-
-- [UE UObject 源码阅读](/ue/uobject-source)
 - [UE CharacterMovement 源码阅读](/ue/character-movement)
 - [UE AI Perception 死亡复活感知问题](/ue/ai-perception)
 ```
@@ -293,50 +291,56 @@ sidebar: {
 
 ### 9.1 推荐图片存放位置
 
-把图片放到：
+每篇文章使用独立目录。正文写在 `index.md`，图片放在同级 `image/` 目录：
 
 ```text
-docs/public/images/
+docs/ue/character-movement/
+├─ index.md
+└─ image/
+   └─ velocity-flow.png
 ```
 
-推荐分类：
+项目复盘同理：
 
 ```text
-docs/public/images/ue/
-docs/public/images/projects/
-docs/public/images/profile/
+docs/projects/mech-pve-ai/
+├─ index.md
+└─ image/
+   └─ utility-loop.png
 ```
+
+不再维护统一公共图片目录。图片跟随文章存放，方便复制、删除和迁移单篇文章时保持结构清晰。
 
 ### 9.2 Markdown 引用图片
 
 如果图片路径是：
 
 ```text
-docs/public/images/ue/character-movement-flow.png
+docs/ue/character-movement/image/velocity-flow.png
 ```
 
 Markdown 里写：
 
 ```md
-![CharacterMovement 流程](/images/ue/character-movement-flow.png)
+![CharacterMovement 速度流程](./image/velocity-flow.png)
 ```
 
 注意：
 
 ```text
-docs/public/images/ue/a.png
+docs/ue/character-movement/image/a.png
 ```
 
 在 Markdown 中写：
 
 ```md
-/images/ue/a.png
+./image/a.png
 ```
 
 不要写成：
 
 ```md
-docs/public/images/ue/a.png
+docs/ue/character-movement/image/a.png
 ```
 
 ### 9.3 图片命名建议
@@ -417,23 +421,20 @@ A
 ### UE 源码
 
 ```text
-docs/ue/uobject-source.md
-docs/ue/character-movement.md
-docs/ue/network-movement.md
-docs/ue/ai-perception.md
-docs/ue/behavior-tree.md
-docs/ue/animation-blueprint.md
-docs/ue/packaging-assets.md
-docs/ue/rendering-style.md
+docs/ue/uobject-source/index.md
+docs/ue/character-movement/index.md
+docs/ue/network-movement/index.md
+docs/ue/ai-perception/index.md
+docs/ue/animation-blueprint/index.md
+docs/ue/rendering-style/index.md
 ```
 
 ### 项目复盘
 
 ```text
-docs/projects/mech-pve-ai.md
-docs/projects/gameplay-autotest.md
-docs/projects/ue-tools.md
-docs/projects/data-pipeline.md
+docs/projects/mech-pve-ai/index.md
+docs/projects/gameplay-autotest/index.md
+docs/projects/data-pipeline/index.md
 ```
 
 ### 工具链
@@ -464,9 +465,9 @@ docs/tools/
 
 ```text
 uobject-source.md
-character-movement.md
-ai-perception.md
-gameplay-autotest.md
+character-movement/
+ai-perception/
+gameplay-autotest/
 ```
 
 不推荐：
