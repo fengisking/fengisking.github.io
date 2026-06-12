@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" role="img" aria-labelledby="title desc">
+  <title id="title">UE 源码目录和模块架构</title>
+  <desc id="desc">UE 源码按 Runtime、Editor、Developer、Programs 和 Plugins 分层，模块通过 Build.cs 和 Target.cs 编译。</desc>
+  <rect width="960" height="320" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">UE 源码目录和模块架构</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" fill="#1b2638">
+    <rect x="60" y="92" width="170" height="72" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="108" y="134" font-size="18">Runtime</text>
+    <rect x="270" y="92" width="170" height="72" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="326" y="134" font-size="18">Editor</text>
+    <rect x="480" y="92" width="170" height="72" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="530" y="134" font-size="18">Programs</text>
+    <rect x="690" y="92" width="170" height="72" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="746" y="134" font-size="18">Plugins</text>
+    <rect x="170" y="220" width="230" height="58" rx="8" fill="#fff" stroke="#5e9c76"/><text x="224" y="256" font-size="17">*.Build.cs</text>
+    <rect x="560" y="220" width="230" height="58" rx="8" fill="#fff" stroke="#5e9c76"/><text x="612" y="256" font-size="17">*.Target.cs</text>
+    <path d="M145 164l120 56M355 164l-70 56M565 164l110 56M775 164l-100 56" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="300" y="198" font-size="15" fill="#52606d">模块边界、依赖和构建目标决定源码怎么读、怎么编译、怎么打包</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

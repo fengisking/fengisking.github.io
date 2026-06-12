@@ -177,6 +177,8 @@ Defense
 
 ## 5. GameplayTag 在 GAS 里的作用
 
+更完整的 Tag 机制可以先读 [GameplayTag 详解](/ue/gameplay-tag/)。
+
 Tag 是 GAS 的状态语言：
 
 ```text

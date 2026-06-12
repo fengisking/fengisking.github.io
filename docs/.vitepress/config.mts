@@ -23,7 +23,8 @@ export default defineConfig({
           text: '学习路线',
           items: [
             { text: 'UE 笔记总览', link: '/ue/' },
-            { text: 'UE 学习路线和源码阅读方法', link: '/ue/ue-learning-roadmap-source-reading/' }
+            { text: 'UE 学习路线和源码阅读方法', link: '/ue/ue-learning-roadmap-source-reading/' },
+            { text: 'UE 源码目录和模块架构', link: '/ue/source-module-architecture/' }
           ]
         },
         {
@@ -32,12 +33,14 @@ export default defineConfig({
             { text: 'UE 反射详解', link: '/ue/ue-reflection/' },
             { text: 'UE 的 GC 详解', link: '/ue/ue-gc/' },
             { text: '智能指针和 Delegate 详解', link: '/ue/smart-pointer-delegate/' },
+            { text: 'GameplayTag 详解', link: '/ue/gameplay-tag/' },
             { text: 'UE 运行时问题解答', link: '/ue/ue-runtime-questions/' }
           ]
         },
         {
           text: 'Gameplay 和 AI',
           items: [
+            { text: 'Enhanced Input 详解', link: '/ue/enhanced-input/' },
             { text: 'CharacterMovement 详解', link: '/ue/character-movement-deep-dive/' },
             { text: 'CharacterMovement 源码阅读', link: '/ue/character-movement/' },
             { text: 'Navigation 详解', link: '/ue/navigation/' },

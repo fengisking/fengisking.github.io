@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">GameplayTag 状态驱动链路</title>
+  <desc id="desc">GameplayTag 从配置或 Native 定义进入 TagsManager，再由 ASC 管理状态并驱动技能、动画、AI 和 UI。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">GameplayTag 状态驱动链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1f2933">
+    <rect x="58" y="108" width="145" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="92" y="147">Tag 配置</text>
+    <rect x="248" y="108" width="145" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="282" y="147">TagsManager</text>
+    <rect x="438" y="108" width="145" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="486" y="147">ASC</text>
+    <rect x="628" y="108" width="145" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="660" y="147">Tag Event</text>
+    <rect x="818" y="108" width="95" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="838" y="137">技能</text><text x="838" y="158">AI/UI</text>
+    <path d="M203 142h45M393 142h45M583 142h45M773 142h45" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="258" y="236" fill="#52606d">Tag 表达状态，数值仍应放 Attribute 或业务变量</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

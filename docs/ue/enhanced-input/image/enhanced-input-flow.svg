@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">Enhanced Input 输入链路</title>
+  <desc id="desc">硬件输入经过 MappingContext、Modifier 和 Trigger，输出 InputAction 语义，再进入角色、移动和技能系统。</desc>
+  <rect width="960" height="300" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">Enhanced Input 输入链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="15" fill="#1b2638">
+    <rect x="48" y="108" width="120" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="78" y="147">硬件输入</text>
+    <rect x="205" y="108" width="145" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="238" y="147">MappingContext</text>
+    <rect x="387" y="108" width="120" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="417" y="147">Modifier</text>
+    <rect x="544" y="108" width="120" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="580" y="147">Trigger</text>
+    <rect x="701" y="108" width="120" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="734" y="147">Action</text>
+    <rect x="858" y="108" width="82" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="875" y="137">移动</text><text x="875" y="158">技能</text>
+    <path d="M168 142h37M350 142h37M507 142h37M664 142h37M821 142h37" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="230" y="236" fill="#52606d">InputAction 表达语义，不应该按具体按键命名</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

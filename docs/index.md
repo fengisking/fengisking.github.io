@@ -9,16 +9,19 @@
 ### 学习路线
 
 - [UE 学习路线和源码阅读方法](/ue/ue-learning-roadmap-source-reading/)
+- [UE 源码目录和模块架构详解](/ue/source-module-architecture/)
 
 ### 核心机制
 
 - [UE 反射详解](/ue/ue-reflection/)
 - [UE 的 GC 详解](/ue/ue-gc/)
 - [智能指针和 Delegate 详解](/ue/smart-pointer-delegate/)
+- [GameplayTag 详解](/ue/gameplay-tag/)
 - [UE 运行时问题解答](/ue/ue-runtime-questions/)
 
 ### Gameplay 和 AI
 
+- [Enhanced Input 详解](/ue/enhanced-input/)
 - [CharacterMovement 详解](/ue/character-movement-deep-dive/)
 - [UE CharacterMovement 源码阅读：MaxWalkSpeed 到底在哪里生效](/ue/character-movement/)
 - [Navigation 详解](/ue/navigation/)
