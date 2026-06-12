@@ -344,3 +344,134 @@ Behavior Tree 适合表达明确状态机，但自动跑测会遇到大量动态
 - 给每次失败保存地图 Seed、位置和目标 Actor 名称。
 - 增加跑测批处理入口，支持连续执行多个 PCG Seed。
 - 增加可视化回放，把移动路径、失败点和目标选择画在地图上。
+
+## 11. 项目源码入口：上下文如何生成
+
+源码位置：
+
+```text
+Script/Core/GameLogic/GameManager/SGPlayerContextManager.as
+Script/Core/GameLogic/PlayerAction/SGUtilityEvaluatorComponent.as
+Script/Core/GameLogic/PlayerAction/SGPlayerActionBase.as
+```
+
+自动跑测的核心不是“随机按键”，而是先把玩家和世界状态整理成上下文，再由 Utility 选择动作。`SGPlayerContextManager` 负责采集世界状态，`SGUtilityEvaluatorComponent` 负责把状态转成候选行为和评分。
+
+主链路：
+
+```text
+Tick / 定时刷新
+→ SGPlayerContextManager 采集玩家状态
+→ 采集敌人、补给、撤离点、POI、弹药、血量
+→ 生成 SGPlayerContext
+→ SGUtilityEvaluatorComponent 读取 Context
+→ 生成 Move / Combat / Supply / Extraction 候选
+→ 计算 Score
+→ 选择最高优先级 Action
+→ SGPlayerActionBase 派生类执行
+```
+
+这条链路的关键是“上下文要稳定”。如果敌人、补给、撤离点每帧抖动，Utility 评分就会抖动，AI 会频繁切换目标。
+
+## 12. 项目源码入口：候选行为怎么产生
+
+源码位置：
+
+```text
+Script/Core/GameLogic/PlayerAction/SGUtilityEvaluatorComponent.as
+Script/Core/GameLogic/PlayerAction/SGPlayerMoveAction.as
+Script/Core/GameLogic/PlayerAction/SGPlayerLookAction.as
+```
+
+Utility 不是直接执行动作，而是先生成候选。每个候选至少应该包含：
+
+```text
+行为类型
+目标 Actor 或位置
+接受半径
+移动模式
+期望朝向
+风险评分
+收益评分
+失败原因
+```
+
+典型流程：
+
+```text
+评估战斗候选
+→ 评估补给候选
+→ 评估撤离候选
+→ 评估 POI 探索候选
+→ 过滤不可执行项
+→ 按 Score 排序
+→ 保留当前 Action 的稳定性权重
+→ 切换或继续当前 Action
+```
+
+这里要避免每帧贪心切换。比如血量略低就去补给，看到敌人又马上回头，会导致 AI 在两个目标之间来回震荡。解决方式是加滞回、冷却、当前目标粘性和失败黑名单。
+
+## 13. 项目源码入口：移动稳定性怎么判断
+
+源码位置：
+
+```text
+Script/Core/GameLogic/PlayerAction/SGPlayerMoveAction.as
+Script/Core/GameLogic/Movement/SGCharacterMovementComponent.as
+Script/Core/GameLogic/Characters/SGPlayerCharacter.as
+```
+
+移动 Action 需要持续判断“是否真的在靠近目标”。不能只看 MoveTo 指令是否发出。
+
+建议记录：
+
+```text
+当前位置
+上一次位置
+目标位置
+距离变化
+速度大小
+卡住时间
+路径点或直线方向
+是否在飞行、冲刺、瞄准、换弹
+```
+
+判断链路：
+
+```text
+每隔固定时间采样位置
+→ 计算到目标距离是否减少
+→ 如果速度很低且距离没变，累计卡住时间
+→ 超过阈值，尝试跳跃/冲刺/飞行/重新选点
+→ 多次失败，把目标加入短期黑名单
+```
+
+这比“超时就失败”更好，因为它能区分目标远、移动慢和真正卡住。
+
+## 14. 项目源码入口：跑测日志应该记录什么
+
+源码位置：
+
+```text
+Script/Core/GameLogic/PlayerAction/SGUtilityEvaluatorComponent.as
+Script/Core/GameLogic/GameManager/SGPlayerContextManager.as
+```
+
+跑测日志不能只记录最终成功或失败。要能回答“为什么 AI 做了这个决定”。
+
+建议每次 Action 切换记录：
+
+```text
+时间戳
+当前血量、弹药、耐力
+最近敌人距离
+当前目标类型
+候选列表和分数
+被过滤候选的原因
+最终选择的 Action
+Action 结束原因
+卡住次数
+死亡原因
+```
+
+有这些数据，跑测失败后才能定位是配置问题、寻路问题、战斗策略问题，还是具体动作实现问题。

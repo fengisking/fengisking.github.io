@@ -236,3 +236,102 @@ OnPlayerRevive
 - 多 AI 同时感知同一个复活玩家时，ForgetActor 应该由谁触发。
 - 感知缓存清理是否要做成统一 GameplayState 事件。
 - Perception 和团队阵营变化的刷新顺序如何保证。
+
+## 10. 源码精读补充：Perception 更新从哪里开始
+
+源码位置：
+
+```text
+Engine/Source/Runtime/AIModule/Classes/Perception/AIPerceptionSystem.h
+Engine/Source/Runtime/AIModule/Private/Perception/AIPerceptionSystem.cpp
+Engine/Source/Runtime/AIModule/Classes/Perception/AIPerceptionComponent.h
+Engine/Source/Runtime/AIModule/Private/Perception/AIPerceptionComponent.cpp
+```
+
+AI Perception 的更新不是每个 AI 自己随便 Trace。`UAIPerceptionSystem` 是全局系统，负责管理 Sense 和 Listener。`UAIPerceptionComponent` 是 AI 身上的监听组件，保存该 AI 感知到的目标和刺激。
+
+主链路：
+
+```text
+UAIPerceptionSystem::Tick
+→ 遍历 UAISense
+→ UAISense_Sight::Update
+→ 生成或更新 FAIStimulus
+→ UAIPerceptionComponent::ProcessStimuli
+→ 更新 PerceptualData
+→ 触发 OnTargetPerceptionUpdated / OnPerceptionUpdated
+```
+
+如果目标死亡后仍被感知，问题通常不是“Sight 没 Trace”，而是组件里缓存的 `PerceptualData` 还没有被清理或更新成失效刺激。
+
+## 11. 源码精读补充：Sight 如何判断看见目标
+
+源码位置：
+
+```text
+Engine/Source/Runtime/AIModule/Classes/Perception/AISense_Sight.h
+Engine/Source/Runtime/AIModule/Private/Perception/AISense_Sight.cpp
+```
+
+Sight 会维护 Listener 和 Target 的查询队列。它会按距离、重要性和时间预算分批处理，而不是一帧把所有 AI 对所有目标的视线检测全做完。
+
+简化流程：
+
+```text
+注册 Listener
+→ 注册 Target 或 StimuliSource
+→ 生成 Sight Query
+→ UAISense_Sight::Update 按预算取 Query
+→ 检查距离、视野角、遮挡 Trace
+→ 生成 SuccessfullySensed 或失效 Stimulus
+→ Listener 的 PerceptionComponent 处理 Stimulus
+```
+
+这解释了为什么感知有时不是立刻刷新：Sight 有预算和更新间隔，大量 AI 时感知变化可能延迟到后续 Tick。
+
+## 12. 源码精读补充：ForgetActor 为什么能解决复活问题
+
+源码位置：
+
+```text
+Engine/Source/Runtime/AIModule/Private/Perception/AIPerceptionComponent.cpp
+Engine/Source/Runtime/AIModule/Classes/Perception/AIPerceptionTypes.h
+```
+
+`UAIPerceptionComponent` 内部会按 Actor 保存感知数据。死亡、复活、换 Pawn、隐藏显示、阵营变化，都可能让旧缓存不再符合当前业务状态。
+
+缓存结构可以理解为：
+
+```text
+PerceptualData[Actor]
+→ 不同 Sense 的 FAIStimulus
+→ LastSensedStimuli
+→ 是否 SuccessfullySensed
+→ LastSensedTime / ExpirationAge
+```
+
+`ForgetActor` 会删除指定 Actor 的感知缓存，让后续感知重新从当前状态建立。复活时如果不清缓存，AI 可能继续使用死亡前的刺激状态，导致状态机以为目标仍然不可见或仍然已感知。
+
+## 13. 项目源码对应：死亡复活刷新策略
+
+源码位置：
+
+```text
+Script/Core/Combat/AI/Components/SGAISensingPerceptionComponent.as
+Script/Core/Combat/AI/Components/EnmityTrackerComponent.as
+Script/Core/GameLogic/Characters/Monsters/SGMonsterCharacter.as
+```
+
+项目里更稳的策略是把感知刷新和仇恨刷新拆开：
+
+```text
+玩家死亡
+→ AI 感知可以 ForgetActor 或标记目标无效
+→ 仇恨系统清理或降低目标权重
+→ 玩家复活
+→ 重新注册可被感知状态
+→ 主动通知附近 AI 刷新目标
+→ 下一轮 Perception 重新建立刺激
+```
+
+不要只依赖 Sight 自己过期。死亡复活是 Gameplay 状态强变化，应该主动刷新感知缓存和仇恨缓存。

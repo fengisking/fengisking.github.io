@@ -133,3 +133,118 @@ Unreal Insights LoadTime
 
 World Partition 的核心是把世界拆成 Runtime Cell，并由 Streaming Source 和 Data Layer 控制加载。大世界优化不只是流式距离，还包括 Actor 初始化成本、HLOD、AI 休眠和异步加载峰值管理。
 
+## 12. 源码精读：RuntimeHash 如何决定加载 Cell
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Public/WorldPartition/WorldPartition.h
+Engine/Source/Runtime/Engine/Private/WorldPartition/WorldPartition.cpp
+Engine/Source/Runtime/Engine/Private/WorldPartition/WorldPartitionRuntimeHash.cpp
+Engine/Source/Runtime/Engine/Private/WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.cpp
+```
+
+World Partition 运行时不会逐个 Actor 判断是否加载，而是通过 RuntimeHash 计算 Streaming Source 覆盖到哪些 Cell。
+
+流程：
+
+```text
+UWorldPartition::Tick
+→ 收集 IWorldPartitionStreamingSourceProvider
+→ 生成 FWorldPartitionStreamingSource
+→ RuntimeHash 根据 Source 查询 Cell
+→ 标记 Cell 目标状态 Loaded / Activated
+→ Streaming Policy 执行加载或卸载
+```
+
+Loaded 和 Activated 有区别。Loaded 表示资源进入内存，Activated 表示 Actor 进入世界并参与运行。远处预加载可以只 Loaded，接近后再 Activated。
+
+## 13. 源码精读：Actor Descriptor 是什么
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Public/WorldPartition/WorldPartitionActorDesc.h
+Engine/Source/Runtime/Engine/Private/WorldPartition/WorldPartitionActorDesc.cpp
+Engine/Source/Runtime/Engine/Private/WorldPartition/WorldPartitionActorDescArchive.cpp
+```
+
+World Partition 不需要加载完整 Actor 才知道它在哪、属于哪个 DataLayer、包路径是什么。它会保存 Actor Descriptor，记录 Actor 的轻量元数据。
+
+Descriptor 包含：
+
+```text
+Actor Guid
+Actor Class
+Package 路径
+Bounds
+Runtime Grid
+Data Layers
+References
+HLOD Layer
+```
+
+构建 Runtime Cell 时，系统使用这些 Descriptor 分配 Actor，而不是把所有 Actor 全部加载到内存。
+
+## 14. 源码精读：Cell 加载后 Actor 生命周期
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Public/WorldPartition/WorldPartitionRuntimeCell.h
+Engine/Source/Runtime/Engine/Private/WorldPartition/WorldPartitionRuntimeCell.cpp
+Engine/Source/Runtime/Engine/Private/LevelStreaming.cpp
+```
+
+当 Cell 被要求加载时，它会触发对应 Package / Level Instance 的流式加载。Actor 真正进世界后，仍然走普通 Actor 生命周期。
+
+链路：
+
+```text
+Cell 状态变为 ShouldBeLoaded
+→ 请求异步加载 Cell Package
+→ Package 加载完成
+→ Cell 状态 Loaded
+→ ShouldBeActivated
+→ Actor 注册到 World
+→ RegisterAllComponents
+→ BeginPlay
+```
+
+卸载时则反向执行：
+
+```text
+Cell 不再被 Source 覆盖
+→ Deactivate
+→ Actor EndPlay
+→ UnregisterComponent
+→ 卸载 Package
+```
+
+所以大世界卡顿往往不只在 IO，Actor 激活阶段的组件注册和 BeginPlay 也很重。
+
+## 15. 源码精读：Streaming Source 怎么接入项目
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Public/WorldPartition/WorldPartitionStreamingSource.h
+Engine/Source/Runtime/Engine/Private/WorldPartition/WorldPartitionSubsystem.cpp
+```
+
+玩家、摄像机、载具、飞船、远程观察点都可以作为 Streaming Source。项目里可以实现 Provider 或使用组件注册 Source。
+
+关键字段：
+
+```text
+Name
+Location
+Rotation
+TargetGrid
+TargetState
+Shapes
+Priority
+bEnabled
+```
+
+优化时可以给高速载具更大的加载范围，给普通玩家较小范围，给剧情镜头临时 Source。Source 数量越多，Cell 查询和加载压力越大，要控制生命周期。

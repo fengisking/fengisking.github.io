@@ -177,3 +177,107 @@ Nanite 场景复杂度
 
 UE 渲染风格改造要按层级推进。材质和后处理最稳，SceneProxy 和 Shader 次之，改 Renderer 和 Shading Model 成本最高。二次元风格的核心不是一个描边，而是光照、材质、阴影、后处理和美术资产规范的组合。
 
+## 12. 源码精读：从组件到 SceneProxy
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h
+Engine/Source/Runtime/Engine/Private/Components/PrimitiveComponent.cpp
+Engine/Source/Runtime/Renderer/Private/PrimitiveSceneInfo.cpp
+```
+
+渲染线程不能直接读取 Gameplay 线程上的组件状态。UE 会把可渲染组件转换成 `FPrimitiveSceneProxy`，再提交给渲染场景。
+
+调用链：
+
+```text
+UPrimitiveComponent::RegisterComponent
+→ CreateRenderState_Concurrent
+→ CreateSceneProxy
+→ FScene::AddPrimitive
+→ 创建 FPrimitiveSceneInfo
+→ RenderThread 保存 PrimitiveSceneProxy
+→ 后续可见性和绘制使用 Proxy
+```
+
+所以如果要自定义一个可渲染组件，关键不是只写 Component，而是实现它如何创建 SceneProxy，SceneProxy 如何提供 MeshBatch、材质、包围盒和渲染标记。
+
+## 13. 源码精读：Deferred Renderer 主流程
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Renderer/Private/SceneRendering.cpp
+Engine/Source/Runtime/Renderer/Private/DeferredShadingRenderer.cpp
+Engine/Source/Runtime/Renderer/Private/BasePassRendering.cpp
+Engine/Source/Runtime/Renderer/Private/SceneVisibility.cpp
+```
+
+主渲染流程由 `FSceneRenderer` 和 `FDeferredShadingSceneRenderer` 组织。它会先做可见性，再按 Pass 渲染深度、BasePass、阴影、光照、透明和后处理。
+
+简化链路：
+
+```text
+UGameViewportClient / Engine Draw
+→ FRendererModule::BeginRenderingViewFamily
+→ FSceneRenderer::CreateSceneRenderer
+→ FDeferredShadingSceneRenderer::Render
+→ InitViews / ComputeViewVisibility
+→ RenderPrePass
+→ RenderBasePass
+→ RenderShadowDepthMaps
+→ RenderLights
+→ RenderTranslucency
+→ AddPostProcessingPasses
+→ Tonemapper
+```
+
+改渲染风格时要先判断目标在哪个阶段实现。如果只是颜色和描边，通常后处理或材质就够；如果要改变光照模型，才需要 Shading Model 或 BasePass/Lighting 层修改。
+
+## 14. 源码精读：后处理为什么适合风格化
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Renderer/Private/PostProcess
+Engine/Source/Runtime/Renderer/Private/PostProcess/PostProcessing.cpp
+Engine/Source/Runtime/Engine/Classes/Engine/Scene.h
+```
+
+后处理在场景已经渲染成纹理后执行，可以读取 SceneColor、Depth、Normal、CustomDepth、CustomStencil 等信息。它适合做全屏风格统一，例如色阶、LUT、描边、暗角、屏幕空间线稿。
+
+流程：
+
+```text
+BasePass / Lighting 输出 SceneColor
+→ 后处理链读取 SceneColor 和 GBuffer
+→ PostProcess Material 执行
+→ Tonemapper 和输出
+```
+
+缺点是它只能基于屏幕空间信息判断，无法天然知道完整物体拓扑。比如后处理描边对遮挡、透明物、细小结构和远距离对象需要额外规则。
+
+## 15. 源码精读：自定义 Shading Model 的代价
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Classes/Materials/Material.h
+Engine/Source/Runtime/Engine/Public/MaterialShared.h
+Engine/Source/Runtime/Renderer/Private/ShadingModels.ush
+Engine/Source/Runtime/Renderer/Private/BasePassPixelShader.usf
+```
+
+新增 Shading Model 不是只加一个材质选项。它通常涉及：
+
+```text
+枚举增加 ShadingModel
+→ Material 编译环境传递宏
+→ GBuffer 编码增加标记或参数
+→ BasePass 写入数据
+→ Lighting 阶段按新模型计算光照
+→ 编辑器材质面板暴露选项
+```
+
+这会增加引擎分支维护成本。小团队要优先尝试材质函数、Ramp、后处理和 CustomData，只有美术目标无法达成时再改 Shading Model。

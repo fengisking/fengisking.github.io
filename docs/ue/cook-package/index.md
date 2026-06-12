@@ -173,3 +173,104 @@ Cook log 是否有 Can't find file
 
 打包的核心链路是 Build、Cook、Stage、Package。Cook 决定哪些资源进入包体，硬引用通常自动进入依赖链，软引用需要 AssetManager、Label 或配置显式收集。稳定的项目应该把打包命令脚本化，并把资源缺失问题定位到引用和 Cook 规则。
 
+## 11. 源码精读：BuildCookRun 的阶段
+
+源码位置：
+
+```text
+Engine/Source/Programs/AutomationTool/Scripts/BuildCookRun.Automation.cs
+Engine/Source/Programs/AutomationTool/AutomationUtils
+Engine/Source/Programs/UnrealBuildTool
+```
+
+`RunUAT BuildCookRun` 是打包自动化入口。它把多个阶段串起来，而不是一个单一动作。
+
+执行链路：
+
+```text
+RunUAT.bat
+→ AutomationTool
+→ BuildCookRun
+→ ProjectParams 解析命令行
+→ Build 阶段调用 UBT
+→ Cook 阶段调用 CookCommandlet
+→ Stage 阶段复制文件
+→ Package 阶段生成 pak / iostore
+→ Archive 阶段复制到输出目录
+```
+
+排查打包失败时，要先判断失败阶段。编译错误看 UBT，资源错误看 Cook，缺文件看 Stage，包体错误看 Pak/IoStore。
+
+## 12. 源码精读：CookCommandlet 如何收集资源
+
+源码位置：
+
+```text
+Engine/Source/Editor/UnrealEd/Private/Commandlets/CookCommandlet.cpp
+Engine/Source/Runtime/Engine/Private/AssetManager.cpp
+Engine/Source/Runtime/AssetRegistry
+```
+
+Cook 的关键是确定“哪些 Package 要进入目标平台产物”。入口可能来自地图、配置、AssetManager、PrimaryAssetLabel、命令行、硬引用依赖。
+
+简化链路：
+
+```text
+CookCommandlet 启动
+→ 读取目标平台和 Cook 参数
+→ 收集初始 Package 列表
+→ AssetRegistry 查询依赖
+→ 加载 Package
+→ SaveCookedPackage
+→ 写入目标平台 cooked 目录
+```
+
+如果某个软引用资源运行时加载失败，通常要回到“初始 Package 列表”和“AssetManager 规则”确认它有没有被收集。
+
+## 13. 源码精读：硬引用为什么自动进入 Cook
+
+源码位置：
+
+```text
+Engine/Source/Runtime/AssetRegistry/Public/AssetRegistry/AssetRegistryModule.h
+Engine/Source/Runtime/AssetRegistry/Private/AssetRegistry.cpp
+Engine/Source/Runtime/CoreUObject/Private/Serialization/ArchiveUObject.cpp
+```
+
+硬引用会写入资产依赖图。比如一个蓝图默认属性直接引用一个 Mesh，AssetRegistry 能分析到这个依赖。Cook 收集入口资产后，会沿依赖图继续加入硬引用资产。
+
+流程：
+
+```text
+入口地图或 PrimaryAsset 被加入 Cook
+→ AssetRegistry 查 Package 依赖
+→ 发现硬引用资源
+→ 依赖资源加入 Cook 队列
+→ 递归收集
+```
+
+软引用只是路径，不一定会作为强依赖递归 Cook。它需要 AssetManager 或配置显式告诉 Cook：“这个路径未来运行时会用到”。
+
+## 14. 源码精读：Pak / IoStore 做了什么
+
+源码位置：
+
+```text
+Engine/Source/Programs/UnrealPak
+Engine/Source/Runtime/IOStore
+Engine/Source/Developer/IoStoreUtilities
+```
+
+Stage 阶段把 cooked 文件放到临时目录，Package 阶段再把这些文件组织成运行时容器。UE4 常见是 Pak，UE5 项目更多使用 IoStore，生成 `.utoc` 和 `.ucas`。
+
+简化流程：
+
+```text
+Stage cooked 文件和二进制
+→ 根据 staging manifest 收集文件
+→ UnrealPak 或 IoStoreUtilities 打包
+→ 生成容器和索引
+→ 运行时通过 PakPlatformFile / IoDispatcher 读取
+```
+
+包体里缺资源时，不要只看源 Content 目录，要看 cooked 输出和最终容器里是否存在目标资源。

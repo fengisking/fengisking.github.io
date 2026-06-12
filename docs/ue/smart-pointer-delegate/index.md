@@ -163,3 +163,90 @@ Actor 组件之间长期引用：UPROPERTY TObjectPtr
 
 智能指针负责生命周期和所有权，Delegate 负责解耦通信。UObject 世界优先使用 `UPROPERTY`、`TObjectPtr`、`TWeakObjectPtr`、`TSoftObjectPtr`；普通 C++ 世界再使用 `TUniquePtr`、`TSharedPtr`、`TWeakPtr`。Delegate 绑定时必须把生命周期放在第一位。
 
+## 11. 源码精读：TSharedPtr 的引用计数
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Core/Public/Templates/SharedPointer.h
+Engine/Source/Runtime/Core/Public/Templates/SharedPointerInternals.h
+```
+
+`TSharedPtr` 由两部分组成：对象指针和引用控制块。控制块里有强引用计数和弱引用计数。复制 `TSharedPtr` 会增加强引用计数，析构时减少强引用计数；强引用归零后销毁对象，弱引用归零后释放控制块。
+
+流程：
+
+```text
+MakeShared / MakeShareable
+→ 创建对象和控制块
+→ TSharedPtr 持有对象指针和控制块指针
+→ 拷贝时强引用 +1
+→ TWeakPtr 只增加弱引用
+→ 强引用归零，调用删除器销毁对象
+→ 弱引用也归零，释放控制块
+```
+
+这套机制适合普通 C++ 对象，不适合 UObject，因为 UObject 的销毁入口是 GC 的 `BeginDestroy / FinishDestroy`，不是 shared pointer 删除器。
+
+## 12. 源码精读：TWeakObjectPtr 为什么安全
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Public/UObject/WeakObjectPtr.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/WeakObjectPtr.cpp
+Engine/Source/Runtime/CoreUObject/Public/UObject/UObjectArray.h
+```
+
+`TWeakObjectPtr` 不直接只保存裸地址，而是保存对象在全局对象数组里的索引和序列号。对象销毁后，对象槽位可能复用，但序列号会变化。弱指针检查时会比对索引和序列号，避免旧地址误判为新对象。
+
+检查链路：
+
+```text
+TWeakObjectPtr::IsValid
+→ FWeakObjectPtr::Get
+→ 根据 ObjectIndex 找 FUObjectItem
+→ 比较 SerialNumber
+→ 检查对象是否 PendingKill / Unreachable
+→ 返回 UObject 或 nullptr
+```
+
+这就是为什么异步回调里捕获 `TWeakObjectPtr` 比捕获裸 `this` 安全。
+
+## 13. 源码精读：Delegate 调用实例
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Core/Public/Delegates/Delegate.h
+Engine/Source/Runtime/Core/Public/Delegates/DelegateInstancesImpl.h
+Engine/Source/Runtime/Core/Public/Delegates/MulticastDelegateBase.h
+Engine/Source/Runtime/CoreUObject/Public/UObject/ScriptDelegates.h
+```
+
+非动态 Delegate 会生成具体的 `TDelegate` 类型，绑定时创建不同的 DelegateInstance。比如 `BindRaw`、`BindSP`、`BindUObject` 对应不同实例类型，它们的生命周期检查也不同。
+
+调用链：
+
+```text
+DECLARE_DELEGATE 定义类型
+→ BindUObject / BindLambda / BindSP
+→ 创建 DelegateInstance
+→ ExecuteIfBound
+→ 检查 Instance 是否有效
+→ 调用 Execute
+→ 最终调用目标函数或 Lambda
+```
+
+多播 Delegate 则是维护一个调用列表：
+
+```text
+AddUObject
+→ InvocationList 增加一项
+→ Broadcast
+→ 遍历 InvocationList
+→ 跳过无效绑定
+→ 执行每个回调
+```
+
+动态 Delegate 不直接保存 C++ 函数指针，而是保存 UObject 和函数名，调用时走 `ProcessEvent`。这让它能被蓝图和序列化系统识别，但性能低于普通 C++ Delegate。

@@ -194,3 +194,78 @@ Shader 编译数量
 
 引擎升级的本质是工程迁移。正确流程是先锁定旧版本基线，再分支升级，依次修编译、资源、运行、打包和性能问题。不要直接在主分支用新引擎打开项目，更不要在没有可回滚方案时批量保存资源。
 
+## 13. 源码精读：UBT 和 UAT 在升级里分别负责什么
+
+源码位置：
+
+```text
+Engine/Source/Programs/UnrealBuildTool
+Engine/Source/Programs/AutomationTool
+Engine/Build/BatchFiles/Build.bat
+Engine/Build/BatchFiles/RunUAT.bat
+```
+
+UBT 负责“怎么编译 C++ 模块”，UAT 负责“怎么自动化构建、Cook、打包、归档”。升级时如果是 C++ 编译失败，主要看 UBT；如果打包流程失败，主要看 UAT。
+
+升级验证链路：
+
+```text
+GenerateProjectFiles
+→ UBT 编译 Editor Target
+→ 启动编辑器升级资源
+→ UBT 编译 Client / Server Target
+→ UAT BuildCookRun
+→ Cook / Stage / Package
+```
+
+很多项目只验证 Editor 能打开，但没有验证 Client、Server 和 Package，最后 CI 或发包阶段才暴露问题。
+
+## 14. 源码精读：Build.cs 变化为什么常见
+
+源码位置：
+
+```text
+Engine/Source/Programs/UnrealBuildTool/System/RulesAssembly.cs
+Engine/Source/Programs/UnrealBuildTool/Configuration/ModuleRules.cs
+Source/<Project>/<Module>.Build.cs
+```
+
+引擎升级后，模块依赖、头文件包含、API 导出宏都可能变化。原来靠间接 include 编译通过的代码，新版本可能失败。
+
+排查顺序：
+
+```text
+看第一个编译错误
+→ 判断是头文件缺失、模块缺失还是 API 改名
+→ 如果类型找不到，先查所属模块
+→ 在 Build.cs 加 Public/PrivateDependencyModuleNames
+→ 再修 include
+```
+
+不要一上来全局 include 大头文件。升级是清理模块边界的机会，应该尽量补正确模块依赖。
+
+## 15. 源码精读：资源版本升级发生在哪里
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Private/Serialization
+Engine/Source/Runtime/CoreUObject/Private/UObject/LinkerLoad.cpp
+Engine/Source/Runtime/CoreUObject/Private/UObject/Package.cpp
+```
+
+资源加载时会通过序列化版本号决定如何读旧数据。引擎版本升级后，一些资源第一次在新版本打开会做版本转换，保存后就写成新版本格式。
+
+流程：
+
+```text
+加载 uasset
+→ 读取 Package summary 和 custom version
+→ LinkerLoad 创建导出对象
+→ UObject::Serialize
+→ 根据版本做兼容读取
+→ PostLoad 修正运行时状态
+→ 保存时写成新版本格式
+```
+
+所以升级分支里批量保存资源前必须确认可回滚。资源一旦保存，新版本格式可能无法被旧引擎打开。

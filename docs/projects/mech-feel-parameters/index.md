@@ -182,3 +182,106 @@ Animation
 
 机甲手感是移动、转向、镜头、武器、动画和反馈共同作用的结果。调参应该先拆状态，再建立标准测试场，最后结合自动跑测和人工体验迭代。好的参数体系要能解释“为什么这样调”，而不是只保存一组数值。
 
+## 13. 源码和项目入口：移动手感从哪里生效
+
+源码位置：
+
+```text
+Script/Core/GameLogic/Characters/SGPlayerCharacter.as
+Script/Core/GameLogic/Movement/SGCharacterMovementComponent.as
+Script/Core/GameLogic/PlayerAction/SGPlayerMoveAction.as
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+机甲移动手感最终会落到 CharacterMovement 的速度、加速度、移动模式和朝向上。项目层通常先在 `SGPlayerCharacter` 判断状态，例如跑、冲刺、飞行、瞄准、手炮状态，再把速度或朝向模式传到移动组件。
+
+推荐调用链记录方式：
+
+```text
+输入或 AI Action
+→ SGPlayerMoveAction 产生移动方向和移动状态
+→ SGPlayerCharacter 判断 Sprint / Flight / Aim / Handgun
+→ SGCharacterMovementComponent 设置 Gait / OrientType / DesiredRotation
+→ CharacterMovement 计算 Velocity 和 ActorRotation
+→ AnimInstance 根据速度、朝向和状态更新动画
+```
+
+调参时要明确一个参数在哪一层生效。如果速度配置在角色上，但最终 `GetMaxSpeed` 或项目移动组件没有读它，那么调配置不会改变实际速度。
+
+## 14. 源码和项目入口：转向手感怎么拆
+
+源码位置：
+
+```text
+Script/Core/GameLogic/Movement/SGCharacterMovementComponent.as
+Script/Core/GameLogic/Characters/SGPlayerCharacter.as
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+转向要拆成三种：
+
+```text
+角色 ActorRotation
+玩家 ControllerRotation
+动画里的 AimOffset / RootYawOffset
+```
+
+项目里的 `SGCharacterMovementComponent` 已经有 `OrientType` 概念。不同状态下朝向来源不同：
+
+```text
+Acceleration：跟随移动方向或控制器方向
+View：跟随视角或瞄准目标
+UseDesiredRotation：业务显式指定
+Flight：飞行状态使用特殊 yaw/pitch 转向速度
+```
+
+调参时不要只看 Actor 转了没有，还要看 Controller 是否同步、动画 AimOffset 是否抵消、网络复制精度是否足够。比如战舰基座旋转、瞄准朝向、移动朝向同时存在时，应该明确最终旋转只在一个出口设置，其他系统只贡献旋转输入或 delta。
+
+## 15. 源码和项目入口：武器反馈怎么进手感
+
+源码位置：
+
+```text
+Script/Core/Combat/Ability/PlayerAbility/SGGA_ShootBase.as
+Script/Core/Combat/Ability/Monster/SGGA_MonsterWeaponShoot.as
+Script/Core/GameLogic/Weapon/SGWeaponInstanceActor.as
+Script/Core/GameLogic/Animation/SGAnimInstance_Locomotion.as
+```
+
+武器手感不只是伤害数值。一次开火通常包含：
+
+```text
+输入触发 Ability
+→ 检查弹药、冷却、状态 Tag
+→ 生成投射物或射线
+→ 播放 Montage / 动画 Notify
+→ 生成枪口特效和音效
+→ 应用后坐力、镜头震动、准星扩散
+→ 命中后播放受击和反馈
+```
+
+如果玩家觉得武器“轻”，可能不是伤害低，而是缺少前摇、后坐、音效低频、命中特效、镜头反馈或动画冲击。调武器要把这些拆成可配置参数，而不是把所有反馈写死在 Ability 里。
+
+## 16. 调参表建议
+
+源码位置：
+
+```text
+Script/Core/GameLogic/Characters/SGPlayerCharacter.as
+Script/Core/GameLogic/Animation/SGAnimInstance_Locomotion.as
+Script/Core/GameLogic/Camera
+```
+
+建议每个参数记录单位和验证方式：
+
+```text
+RunSpeed：cm/s，直线 50m 耗时验证
+Acceleration：cm/s^2，从静止到最大速度耗时验证
+BrakingDeceleration：cm/s^2，松手刹停距离验证
+YawTurnSpeed：deg/s，90 度转向耗时验证
+SprintFOV：degree，冲刺速度感验证
+RecoilPitch：degree，连续射击压枪验证
+CameraLag：second/alpha，急转镜头拖拽验证
+```
+
+有了单位和测试方法，参数才可讨论。否则“重一点”“快一点”“爽一点”很难稳定复现。

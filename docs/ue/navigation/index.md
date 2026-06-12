@@ -151,3 +151,107 @@ stat Navigation
 
 Navigation 是“构建可走区域 + 查询路径 + 路径跟随 + 移动执行”的系统。优化重点不是只调 MoveTo，而是控制 NavMesh 构建成本、动态障碍成本、路径查询频率和 AI 群体移动策略。
 
+## 13. 源码精读：MoveTo 从 AIController 进入
+
+源码位置：
+
+```text
+Engine/Source/Runtime/AIModule/Private/AIController.cpp
+Engine/Source/Runtime/AIModule/Private/Navigation/PathFollowingComponent.cpp
+Engine/Source/Runtime/NavigationSystem/Private/NavigationSystem.cpp
+```
+
+`AAIController::MoveToLocation` 或 BehaviorTree 的 MoveTo Task 最终都会构造一个移动请求。AIController 不直接移动 Pawn，而是先找路径，再把路径交给 PathFollowingComponent。
+
+调用链：
+
+```text
+UBTTask_MoveTo::ExecuteTask
+→ AAIController::MoveTo
+→ AAIController::BuildPathfindingQuery
+→ UNavigationSystemV1::FindPathSync
+→ ARecastNavMesh::FindPath
+→ UPathFollowingComponent::RequestMove
+→ UPathFollowingComponent::FollowPathSegment
+→ MovementComponent::RequestDirectMove / AddMovementInput
+```
+
+所以 MoveTo 卡住时，要分三层排查：有没有路径、PathFollowing 有没有推进、MovementComponent 有没有移动。
+
+## 14. 源码精读：Recast 构建 Tile
+
+源码位置：
+
+```text
+Engine/Source/Runtime/NavigationSystem/Private/NavMesh/RecastNavMesh.cpp
+Engine/Source/Runtime/NavigationSystem/Private/NavMesh/RecastNavMeshGenerator.cpp
+Engine/Source/Runtime/Navmesh/Private/Recast
+```
+
+Recast 会把世界几何转成可寻路多边形。它不是每次 MoveTo 临时扫描世界，而是预先或运行时增量构建 NavMesh。
+
+构建链路：
+
+```text
+收集 NavRelevant 几何
+→ 按 Runtime Grid / Tile 切分
+→ Rasterize 三角面到高度场
+→ 过滤不可走坡度、低矮空间、障碍
+→ 生成 Compact Heightfield
+→ 构建 Region
+→ 生成 Contour
+→ 生成 PolyMesh
+→ 生成 Detour NavMesh Tile
+```
+
+`CellSize` 和 `CellHeight` 会直接影响精度和构建成本。精度越高，Tile 数据越大，构建越慢，查询也可能更贵。
+
+## 15. 源码精读：FindPath 如何搜索
+
+源码位置：
+
+```text
+Engine/Source/Runtime/NavigationSystem/Private/NavMesh/RecastNavMesh.cpp
+Engine/Source/Runtime/Navmesh/Private/Detour
+```
+
+寻路不是在世界坐标网格上找，而是在 NavMesh 多边形图上找。
+
+流程：
+
+```text
+ProjectPointToNavigation 找起点 Poly
+→ ProjectPointToNavigation 找终点 Poly
+→ Detour 在 Poly 图上 A* 搜索
+→ 得到 Poly Corridor
+→ Funnel/StringPulling 拉直路径
+→ 输出 FNavPathPoint 数组
+→ PathFollowingComponent 按路径点推进
+```
+
+如果目标点不在 NavMesh 上，`ProjectPointToNavigation` 可能失败或投影到附近点。很多“AI 不动”其实是目标点不可达或投影失败。
+
+## 16. 源码精读：PathFollowing 怎么驱动移动
+
+源码位置：
+
+```text
+Engine/Source/Runtime/AIModule/Private/Navigation/PathFollowingComponent.cpp
+Engine/Source/Runtime/AIModule/Classes/Navigation/PathFollowingComponent.h
+```
+
+PathFollowingComponent 每帧判断当前路径段是否完成，然后计算期望移动方向。
+
+核心过程：
+
+```text
+TickComponent
+→ FollowPathSegment
+→ 获取当前位置和当前 Segment 终点
+→ 判断是否到达 AcceptanceRadius
+→ 如果到达，AdvancePathSegment
+→ 如果未到达，计算 MoveVelocity
+→ 调用 MovementComponent
+```
+
+如果怪物卡在拐角，可能不是 FindPath 错，而是 PathFollowing 认为当前 Segment 没完成，或者 MovementComponent 无法按期望方向移动。调试时要同时看路径点和实际速度。

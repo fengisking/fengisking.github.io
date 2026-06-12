@@ -180,3 +180,153 @@ AI 自动跑测移动稳定性
 
 CharacterMovement 是“输入到物理位移，再到网络同步和视觉平滑”的完整系统。自定义移动时不能只改一个速度变量，而要同时考虑移动模式、碰撞、预测、服务端模拟、客户端平滑和动画。
 
+## 13. 源码精读：TickComponent 入口
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+Engine/Source/Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h
+```
+
+`TickComponent` 是 CharacterMovement 每帧入口。它会先检查组件是否可 Tick、UpdatedComponent 是否有效、CharacterOwner 是否存在，然后根据网络角色决定走自主代理、模拟代理还是服务端路径。
+
+简化流程：
+
+```text
+UCharacterMovementComponent::TickComponent
+→ 检查 ShouldSkipUpdate
+→ 更新角色状态和根运动
+→ 如果是 SimulatedProxy，走 SimulatedTick
+→ 如果是 AutonomousProxy，走本地预测并发送 ServerMove
+→ 如果是 Authority，执行权威移动
+→ 更新 ComponentVelocity
+```
+
+读这里要重点看三个变量：
+
+```text
+CharacterOwner
+UpdatedComponent
+MovementMode
+```
+
+`UpdatedComponent` 通常是 Character 的 Capsule。真正参与碰撞移动的是 Capsule，不是 Mesh。这也是为什么网络平滑通常平滑 Mesh，而不是直接平滑 Capsule。
+
+## 14. 源码精读：PerformMovement 到 PhysWalking
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+`PerformMovement` 是执行一次完整移动模拟的主函数。它负责处理 RootMotion、移动前状态、物理模拟、移动后状态、落地和模式切换。
+
+调用链：
+
+```text
+PerformMovement
+→ ApplyAccumulatedForces
+→ UpdateCharacterStateBeforeMovement
+→ StartNewPhysics
+→ PhysWalking / PhysFalling / PhysFlying
+→ UpdateCharacterStateAfterMovement
+→ OnMovementUpdated
+→ SaveBaseLocation
+```
+
+`StartNewPhysics` 根据 `MovementMode` 分发。如果是 `MOVE_Walking`，会进入 `PhysWalking`。`PhysWalking` 里最核心的是：
+
+```text
+RestorePreAdditiveRootMotionVelocity
+→ CalcVelocity
+→ ApplyRootMotionToVelocity
+→ MoveAlongFloor
+→ FindFloor
+→ 判断是否 Falling
+```
+
+这里的关键是 `CalcVelocity` 只算速度，`MoveAlongFloor` 才真正移动 UpdatedComponent。
+
+## 15. 源码精读：CalcVelocity 具体做了什么
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+`CalcVelocity` 会根据输入加速度、摩擦、制动和最大速度更新 `Velocity`。它不是简单 `Velocity = Input * MaxSpeed`。
+
+核心逻辑：
+
+```text
+如果没有输入或超速，应用 Braking
+→ 根据 Friction 影响当前速度方向
+→ 根据 Acceleration 增加速度
+→ 限制到 GetMaxSpeed
+→ 处理 RequestedVelocity
+→ 处理流体摩擦等特殊情况
+```
+
+常见参数实际影响：
+
+```text
+MaxAcceleration 控制启动变快还是变慢
+BrakingDecelerationWalking 控制松手后刹停
+GroundFriction 同时影响转向和刹车手感
+MaxWalkSpeed 控制速度上限
+```
+
+所以项目调手感时，如果只改 `MaxWalkSpeed`，只能改变上限，不能解决启动、刹停、转向重量感。
+
+## 16. 源码精读：MoveAlongFloor、StepUp 和 SlideAlongSurface
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+Engine/Source/Runtime/Engine/Private/Components/MovementComponent.cpp
+```
+
+地面移动不是直接沿世界 XY 移动。角色站在斜坡上时，移动方向会投影到地面；撞到障碍时，会尝试滑动或上台阶。
+
+调用链：
+
+```text
+PhysWalking
+→ MoveAlongFloor
+→ ComputeGroundMovementDelta
+→ SafeMoveUpdatedComponent
+→ 如果 Hit
+   → StepUp 尝试上台阶
+   → HandleImpact
+   → SlideAlongSurface
+→ FindFloor 更新 CurrentFloor
+```
+
+`StepUp` 成功与否受 `MaxStepHeight`、碰撞法线、地面可走坡度影响。`SlideAlongSurface` 会根据命中法线把剩余位移投影到可滑动方向。角色贴墙滑动、上台阶、走斜坡的体验都在这几个函数里。
+
+## 17. 源码精读：自定义移动同步最小闭环
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+如果要做滑铲、喷气冲刺、特殊飞行，最小闭环是：
+
+```text
+定义自定义状态
+→ 客户端输入设置状态
+→ FSavedMove 记录状态
+→ GetCompressedFlags 或自定义 MoveData 传给服务端
+→ UpdateFromCompressedFlags 还原状态
+→ 客户端和服务端 PhysCustom 使用同一套计算
+→ 校正后 PrepMoveFor 重放状态
+```
+
+只在客户端设置一个 bool，然后本地加速度，是不够的。服务端不知道这个 bool，就会按普通移动模拟，最后通过 ClientAdjustPosition 把客户端拉回。

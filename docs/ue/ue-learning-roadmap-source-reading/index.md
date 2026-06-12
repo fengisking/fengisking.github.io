@@ -160,3 +160,117 @@ UCharacterMovementComponent::PhysWalking
 
 UE 源码阅读的核心不是“读完所有源码”，而是建立从项目问题到源码入口的定位能力。每次解决一个问题，都沉淀入口、调用链、状态变化和项目结论，长期积累后就能形成自己的引擎知识地图。
 
+## 8. 源码精读训练：Actor 创建问题怎么读
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/LevelActor.cpp
+Engine/Source/Runtime/Engine/Private/Actor.cpp
+Engine/Source/Runtime/Engine/Private/Components/ActorComponent.cpp
+```
+
+如果问题是“组件什么时候创建、注册、BeginPlay”，不要从 UObject 全局读起，直接从 `UWorld::SpawnActor` 断点开始。
+
+阅读链路：
+
+```text
+UWorld::SpawnActor
+→ SpawnActorInternal
+→ StaticConstructObject_Internal
+→ AActor::PostSpawnInitialize
+→ AActor::FinishSpawning
+→ AActor::ExecuteConstruction
+→ AActor::RegisterAllComponents
+→ AActor::DispatchBeginPlay
+```
+
+每走一步记录一个状态：
+
+```text
+Actor 是否已经有 RootComponent
+Components 数组里有哪些组件
+组件是否 IsRegistered
+World 指针是否有效
+BeginPlay 是否已经执行
+```
+
+这样读完以后，你得到的是生命周期模型，而不是散乱函数名。
+
+## 9. 源码精读训练：移动问题怎么读
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+Engine/Source/Runtime/Engine/Private/Components/MovementComponent.cpp
+```
+
+如果问题是“速度为什么不生效”或“角色为什么卡住”，入口从 `UCharacterMovementComponent::TickComponent` 开始。
+
+阅读链路：
+
+```text
+TickComponent
+→ PerformMovement
+→ StartNewPhysics
+→ PhysWalking / PhysFalling
+→ CalcVelocity
+→ SafeMoveUpdatedComponent
+→ SlideAlongSurface / StepUp
+```
+
+重点只追这些变量：
+
+```text
+Acceleration
+Velocity
+MovementMode
+CurrentFloor
+UpdatedComponent
+HitResult
+```
+
+不要一开始读完整个 1 万多行文件。先定位本次问题经过哪条分支，再读分支里的变量变化。
+
+## 10. 源码精读训练：网络问题怎么读
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/NetDriver.cpp
+Engine/Source/Runtime/Engine/Private/DataChannel.cpp
+Engine/Source/Runtime/Engine/Private/ActorReplication.cpp
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+网络问题要先区分是 RPC、属性复制还是移动预测。
+
+定位顺序：
+
+```text
+事件没触发 → 查 RPC 是否发出、Actor 是否有 Channel、函数是否 UFUNCTION
+状态不同步 → 查 Replicated 属性、条件、Dormancy、相关性
+移动抖动 → 查 ServerMove、ClientAdjustPosition、SavedMove
+带宽高 → 查 ActorChannel 数量和属性大小
+```
+
+读源码时从现象倒推，不要直接读 NetDriver 全部逻辑。
+
+## 11. 源码阅读记录模板
+
+建议每次记录：
+
+```text
+问题现象：
+复现步骤：
+入口函数：
+调用链：
+关键变量：
+分支条件：
+最终修改的状态：
+项目结论：
+后续验证：
+```
+
+这样每篇笔记都能复用到项目实践，而不是只变成摘抄源码。

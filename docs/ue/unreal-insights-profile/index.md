@@ -154,3 +154,103 @@ Trace 本身有开销，正式环境采集要控制频道和时长。
 
 Unreal Insights 的核心用法是从慢帧出发，定位线程，再定位事件，再回到源码。项目里应该给关键系统加 `TRACE_CPUPROFILER_EVENT_SCOPE` 和 Bookmark，把性能问题从感觉变成可追踪证据。
 
+## 11. 源码精读：Trace 事件如何写入
+
+源码位置：
+
+```text
+Engine/Source/Runtime/TraceLog/Public/Trace/Trace.h
+Engine/Source/Runtime/TraceLog/Private/Trace
+Engine/Source/Runtime/Core/Public/ProfilingDebugging/CpuProfilerTrace.h
+```
+
+`TRACE_CPUPROFILER_EVENT_SCOPE` 会在作用域开始和结束时写入 Trace 事件。Insights 看到的不是采样猜测，而是运行时主动记录的事件区间。
+
+简化流程：
+
+```text
+TRACE_CPUPROFILER_EVENT_SCOPE(Name)
+→ 构造作用域对象
+→ 写入 Begin 事件和时间戳
+→ 作用域结束析构
+→ 写入 End 事件和时间戳
+→ Trace 缓冲发送到 Insights
+→ Timing View 还原事件区间
+```
+
+所以自定义系统想在 Insights 里可读，应该在关键入口加 scope，比如 AI 决策、刷怪、投射物批处理、自动跑测评估等。
+
+## 12. 源码精读：GameThread 慢帧怎么回到源码
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/LevelTick.cpp
+Engine/Source/Runtime/Engine/Private/World.cpp
+Engine/Source/Runtime/Engine/Private/Actor.cpp
+Engine/Source/Runtime/Engine/Private/Components/ActorComponent.cpp
+```
+
+GameThread 慢帧通常来自世界 Tick、Actor Tick、Component Tick、Timer、AI、碰撞查询、蓝图逻辑。
+
+分析路径：
+
+```text
+Timing View 选中慢帧
+→ 看 GameThread 最长事件
+→ 如果是 World Tick，展开到 ActorComponent Tick
+→ 找具体类名或自定义 Trace 名
+→ 回到对应 Tick 函数
+→ 加更细粒度 TRACE_SCOPE
+→ 复测确认热点
+```
+
+不要只看一个最大函数。有时最大函数只是容器，比如 `UWorld::Tick`，真正热点在它下面某个 Actor Tick 或 Delegate Broadcast。
+
+## 13. 源码精读：Loading Insights 看什么
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Private/Serialization/AsyncLoading2.cpp
+Engine/Source/Runtime/CoreUObject/Private/Serialization/AsyncPackageLoader.cpp
+Engine/Source/Runtime/Engine/Private/StreamableManager.cpp
+```
+
+加载卡顿常见在异步包加载、对象创建、PostLoad、组件注册和 BeginPlay。Loading Insights 可以看到 Package 加载阶段。
+
+阅读顺序：
+
+```text
+找加载尖峰
+→ 看哪个 Package 耗时
+→ 展开 Export 创建和 Serialize
+→ 看 PostLoad 是否重
+→ 对应资源或蓝图
+→ 优化资源依赖或延迟初始化
+```
+
+如果一个地图切换时卡，不要只看 IO，也要看加载后的对象初始化。很多 Gameplay 初始化发生在资源加载之后。
+
+## 14. 源码精读：Networking Insights 看什么
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/NetDriver.cpp
+Engine/Source/Runtime/Engine/Private/ActorReplication.cpp
+Engine/Source/Runtime/Engine/Private/DataChannel.cpp
+```
+
+网络视图可以帮助定位带宽和 RPC 问题。重点看：
+
+```text
+每连接发送字节
+ActorChannel 数量
+属性复制大小
+RPC 频率
+Reliable 队列
+Packet loss 下的重传
+```
+
+如果 DS 带宽高，先按 Actor 类型聚合，再看哪个属性或 RPC 最高频。优化通常不是压缩一个字段，而是降低复制频率、相关性范围和不必要的 ActorChannel。

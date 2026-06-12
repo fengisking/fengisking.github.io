@@ -182,3 +182,131 @@ Lambda 捕获裸 this
 
 Actor 组件可能来自 C++、蓝图 SCS 或运行时动态创建；Construction Script 在构造阶段执行；组件注册后才进入世界；Tick 顺序由 TickGroup 和依赖决定；TaskGraph 和 Async 适合拆后台计算，但 UObject 和世界状态修改应回到 GameThread。
 
+## 11. 源码精读：SpawnActor 到 BeginPlay
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/LevelActor.cpp
+Engine/Source/Runtime/Engine/Private/Actor.cpp
+Engine/Source/Runtime/Engine/Private/World.cpp
+```
+
+Actor 运行时创建的主入口是 `UWorld::SpawnActor`。它会分配对象、初始化 Transform、执行 Construction、注册组件，并在合适时机 BeginPlay。
+
+调用链：
+
+```text
+UWorld::SpawnActor
+→ UWorld::SpawnActorInternal
+→ StaticConstructObject_Internal
+→ AActor::PostSpawnInitialize
+→ AActor::FinishSpawning
+→ AActor::ExecuteConstruction
+→ AActor::RegisterAllComponents
+→ AActor::PostActorConstruction
+→ DispatchBeginPlay
+→ BeginPlay
+```
+
+Deferred Spawn 会把流程拆开：先创建 Actor，再由 `FinishSpawning` 继续 Construction 和注册。这适合在 Construction 前设置初始化参数。
+
+## 12. 源码精读：组件注册到底做了什么
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/ActorComponent.cpp
+Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp
+Engine/Source/Runtime/Engine/Private/Components/PrimitiveComponent.cpp
+```
+
+组件注册不是简单把数组加到 Actor 上。注册后组件会进入世界、创建渲染状态、创建物理状态、注册 Tick。
+
+流程：
+
+```text
+UActorComponent::RegisterComponent
+→ RegisterComponentWithWorld
+→ OnRegister
+→ 如果是 SceneComponent，处理 Attach 和 Transform
+→ 如果是 PrimitiveComponent，CreateRenderState_Concurrent
+→ CreatePhysicsState
+→ RegisterComponentTickFunctions
+```
+
+所以动态创建组件后，如果没有 `RegisterComponent`，它可能存在于内存里，但不会渲染、不会碰撞、不会 Tick。
+
+## 13. 源码精读：Construction Script 为什么会反复执行
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/ActorConstruction.cpp
+Engine/Source/Runtime/Engine/Private/Actor.cpp
+```
+
+编辑器中修改属性、移动 Actor、编译蓝图，都可能触发 Construction Script 重新运行。引擎会重新执行 SCS 和用户 Construction，以便编辑器视图实时反映配置变化。
+
+流程：
+
+```text
+RerunConstructionScripts
+→ 清理 Construction 创建的组件
+→ ExecuteConstruction
+→ 执行蓝图 SCS 节点
+→ UserConstructionScript
+→ 重新注册或更新组件
+```
+
+因此不要在 Construction Script 里做不可逆操作，比如生成永久存档数据、注册全局事件、启动复杂异步任务。
+
+## 14. 源码精读：Tick 调度和 TickGroup
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/TickTaskManager.cpp
+Engine/Source/Runtime/Engine/Public/Tickable.h
+Engine/Source/Runtime/Engine/Classes/Engine/EngineBaseTypes.h
+```
+
+Actor Tick 和 Component Tick 都会包装成 TickFunction，交给 TickTaskManager 按 TickGroup 和依赖执行。
+
+流程：
+
+```text
+RegisterActorTickFunctions / RegisterComponentTickFunctions
+→ TickFunction 注册到 TickTaskManager
+→ 每帧按 TickGroup 分批
+→ 处理 Prerequisite
+→ 可并行执行 TickFunction
+→ 调用 Actor::Tick 或 Component::TickComponent
+```
+
+如果两个对象有严格顺序，不要依赖注册顺序，要显式 AddPrerequisite。
+
+## 15. 源码精读：Async 回 GameThread 的必要性
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Core/Public/Async/Async.h
+Engine/Source/Runtime/Core/Public/Async/TaskGraphInterfaces.h
+Engine/Source/Runtime/Core/Private/Async/TaskGraph.cpp
+```
+
+`Async` 可以把计算丢到线程池，但 UObject 和 World 大多数 API 不是线程安全的。安全模式是后台只做纯计算，结果回 GameThread 应用。
+
+流程：
+
+```text
+Async(ThreadPool)
+→ 后台线程计算纯数据
+→ 捕获 TWeakObjectPtr
+→ AsyncTask(GameThread)
+→ IsValid 检查对象
+→ 修改 Actor / Component / UObject 状态
+```
+
+如果后台线程直接 SpawnActor、RegisterComponent 或改 Actor Transform，就可能和 GameThread 的世界更新、GC、复制、渲染状态同步冲突。

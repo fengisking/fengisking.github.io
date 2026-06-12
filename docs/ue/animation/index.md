@@ -167,3 +167,128 @@ RootYawOffset 或 TurnInPlace
 
 UE 动画系统的核心是“Update 计算状态，Evaluate 计算姿态”。Montage 通过 Slot 接入 AnimGraph，Layered Blend per Bone 通过骨骼权重做局部叠加，AimOffset 本质是姿态 BlendSpace。深入学习时要把 Gameplay 状态、控制器朝向、角色朝向和最终姿态放在同一条链路里理解。
 
+## 13. 源码精读：SkeletalMeshComponent 如何驱动 AnimInstance
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/SkeletalMeshComponent.cpp
+Engine/Source/Runtime/Engine/Private/Animation/AnimInstance.cpp
+Engine/Source/Runtime/Engine/Public/Animation/AnimInstanceProxy.h
+```
+
+动画不是 Actor Tick 里直接算每根骨骼。`USkeletalMeshComponent` 负责调度动画更新和姿态求值，`UAnimInstance` 保存动画逻辑，`FAnimInstanceProxy` 用于跨线程评估。
+
+简化链路：
+
+```text
+USkeletalMeshComponent::TickComponent
+→ TickAnimation
+→ UAnimInstance::UpdateAnimation
+→ NativeUpdateAnimation / BlueprintUpdateAnimation
+→ AnimGraph Update
+→ DispatchParallelEvaluationTasks
+→ ParallelAnimationEvaluation
+→ AnimGraph Evaluate
+→ Final Pose 写回组件
+→ RefreshBoneTransforms
+```
+
+Update 阶段运行在逻辑更新语义里，Evaluate 阶段更关注姿态计算并可能并行执行。复杂 AnimGraph 性能问题通常要看 Evaluate，而不是只看蓝图 EventGraph。
+
+## 14. 源码精读：AnimNode 的 Update 和 Evaluate
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Public/Animation/AnimNodeBase.h
+Engine/Source/Runtime/Engine/Private/Animation/AnimNodeBase.cpp
+Engine/Source/Runtime/AnimGraphRuntime/Public/AnimNodes
+Engine/Source/Runtime/AnimGraphRuntime/Private/AnimNodes
+```
+
+每个 AnimGraph 节点本质是一个 `FAnimNode_Base` 子类。它通常会实现：
+
+```text
+Initialize_AnyThread
+CacheBones_AnyThread
+Update_AnyThread
+Evaluate_AnyThread
+```
+
+Update 主要做权重、时间、状态推进；Evaluate 输出 Pose。比如 Blend 节点在 Update 里计算每个输入 Pose 的权重，在 Evaluate 里真正把多个 Pose 混合成输出姿态。
+
+## 15. 源码精读：Montage 和 Slot
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Animation/AnimInstance.cpp
+Engine/Source/Runtime/Engine/Private/Animation/AnimMontage.cpp
+Engine/Source/Runtime/AnimGraphRuntime/Private/AnimNodes/AnimNode_Slot.cpp
+```
+
+`Montage_Play` 只是创建或更新 `FAnimMontageInstance`。它不会凭空覆盖最终姿态，必须等 AnimGraph 走到对应 Slot 节点。
+
+调用链：
+
+```text
+UAnimInstance::Montage_Play
+→ 创建 FAnimMontageInstance
+→ TickMontage 更新播放时间、Section、Blend
+→ AnimGraph Evaluate 到 FAnimNode_Slot
+→ Slot 节点查找当前 Slot 的 Montage Pose
+→ 按权重混合 Source Pose 和 Montage Pose
+→ 输出给后续节点
+```
+
+如果 Montage 播放成功但角色没动作，优先检查 AnimGraph 里是否有同名 Slot，Slot 是否在正确的骨骼层级前后，Montage 的 Slot 名是否匹配。
+
+## 16. 源码精读：Layered Blend per Bone
+
+源码位置：
+
+```text
+Engine/Source/Runtime/AnimGraphRuntime/Public/AnimNodes/AnimNode_LayeredBoneBlend.h
+Engine/Source/Runtime/AnimGraphRuntime/Private/AnimNodes/AnimNode_LayeredBoneBlend.cpp
+```
+
+Layered Blend per Bone 会先根据 Branch Filter 或 Blend Mask 构建每根骨骼的权重表。Evaluate 时，节点会对每个输入 Pose 按骨骼权重混合。
+
+流程：
+
+```text
+Update 阶段计算 BlendWeights
+→ CacheBones 建立骨骼层级权重
+→ Evaluate Base Pose
+→ Evaluate Blend Poses
+→ 对每根骨骼按权重混合 Transform
+→ 曲线和 RootMotion 按规则混合
+```
+
+局部叠加不生效时，优先查骨骼名、Mesh Skeleton、Branch Depth、节点顺序。比如 AimOffset 应该叠在上半身，不能放在会被后续全身状态机覆盖的位置。
+
+## 17. 源码精读：AimOffset 的本质
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Classes/Animation/AimOffsetBlendSpace.h
+Engine/Source/Runtime/Engine/Private/Animation/BlendSpace.cpp
+Engine/Source/Runtime/AnimGraphRuntime/Private/AnimNodes/AnimNode_BlendSpacePlayer.cpp
+```
+
+AimOffset 本质是 Mesh Space Additive 的 BlendSpace。输入通常是 `AimYaw` 和 `AimPitch`，输出是按角度混合后的瞄准姿态差值。
+
+实际链路：
+
+```text
+Gameplay 计算 ControlRotation - ActorRotation
+→ AnimInstance 保存 AimYaw / AimPitch
+→ BlendSpacePlayer 根据二维参数采样
+→ 输出 additive pose
+→ Layered Blend per Bone 叠到上半身
+→ 最终 Pose 输出
+```
+
+AimOffset 抖动通常不是 AimOffset 资源本身的问题，而是 ControlRotation、ActorRotation、Mesh Rotation、网络平滑之间的参考空间不一致。

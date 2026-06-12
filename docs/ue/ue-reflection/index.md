@@ -193,3 +193,113 @@ UObject* Target;
 
 UE 反射系统的本质是“编译期生成运行时元数据”。UHT 负责把宏标记的 C++ 声明转成生成代码；`.generated.h` 和 `.gen.cpp` 把类型、属性、函数注册到对象系统；运行时的序列化、蓝图、GC、复制、编辑器都基于这套元数据工作。
 
+## 13. 源码精读：从 UCLASS 到 UClass
+
+源码位置：
+
+```text
+Engine/Source/Programs/UnrealHeaderTool/
+Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/Class.cpp
+Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+```
+
+入口不是 `UCLASS` 宏本身，而是 UBT 调用 UHT 的过程。`UCLASS`、`UPROPERTY`、`UFUNCTION` 这些宏在普通 C++ 预处理里大多不会直接生成完整元数据，它们更像给 UHT 的标记。UHT 扫描头文件后，会把类、属性、函数解析成内部描述，再输出生成代码。
+
+完整链路可以这样理解：
+
+```text
+Build Target
+→ UBT 分析模块和头文件
+→ UHT 扫描包含反射宏的头文件
+→ 解析 UCLASS / USTRUCT / UENUM / UPROPERTY / UFUNCTION
+→ 生成 *.generated.h
+→ 生成 *.gen.cpp
+→ C++ 编译器编译用户代码和生成代码
+→ 模块加载
+→ Z_Construct_UClass_XXX
+→ ConstructUClass
+→ UClass 挂接 FProperty / UFunction / 元数据
+```
+
+这里最关键的是 `.gen.cpp`。它会生成 `Z_Construct_UClass_XXX` 一类函数，函数内部描述类名、父类、属性数组、函数数组、元数据、对象构造方式。运行时第一次访问 `StaticClass()` 或模块注册时，这些生成函数会把 C++ 类型注册成 `UClass` 对象。之后编辑器属性面板、蓝图节点、序列化、GC、网络复制看到的都是这个 `UClass` 和它下面的 `FProperty`、`UFunction`。
+
+## 14. 源码精读：FProperty 为什么知道字段位置
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Public/UObject/UnrealType.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/PropertyBaseObject.cpp
+Engine/Source/Runtime/CoreUObject/Private/UObject/Class.cpp
+```
+
+`UPROPERTY` 字段会被 UHT 解析成具体的 `FProperty` 子类，比如 `FIntProperty`、`FFloatProperty`、`FObjectProperty`、`FStructProperty`。每个属性不只是保存名字，还保存属性在对象内存里的偏移。运行时拿到一个 UObject 指针后，`FProperty` 可以通过偏移找到字段地址。
+
+抽象流程：
+
+```text
+UHT 解析字段类型和标记
+→ 生成 FPropertyParams
+→ ConstructUClass 时构造 FProperty
+→ FProperty 链接到 UStruct::ChildProperties
+→ 运行时遍历属性链
+→ ContainerPtrToValuePtr 找到字段地址
+→ Serialize / GC / Details Panel / Replication 使用这个地址
+```
+
+这就是为什么反射字段可以被通用系统处理。序列化不需要知道你的类 C++ 代码怎么写，只要遍历 `UClass` 的属性链，就能知道字段名、类型、数组维度、偏移和标记。
+
+## 15. 源码精读：UFunction 如何调用 C++ 函数
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/ScriptCore.cpp
+Engine/Source/Runtime/CoreUObject/Private/UObject/UObjectGlobals.cpp
+```
+
+`UFUNCTION` 会生成函数反射数据和 thunk。蓝图、RPC、控制台命令、编辑器按钮最终都可能通过 `ProcessEvent` 进入函数调用。
+
+调用链可以简化为：
+
+```text
+外部系统拿到 UObject 和 UFunction
+→ UObject::ProcessEvent
+→ 检查函数 flags 和参数内存
+→ 如果是 native 函数，调用生成的 exec thunk
+→ thunk 从参数栈读取参数
+→ 调用真正的 C++ 函数
+→ 写回返回值和 out 参数
+```
+
+RPC 也是这个逻辑的网络版本。网络层收到 RPC 后，通过 ActorChannel 找到对象和函数，再走 `ProcessEvent` 调用。区别只是参数来自网络包，而不是蓝图虚拟机或本地调用。
+
+## 16. 源码精读：序列化如何借助反射
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Public/UObject/Object.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/Obj.cpp
+Engine/Source/Runtime/CoreUObject/Public/UObject/UnrealType.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/PropertyTag.cpp
+```
+
+序列化的核心不是“把内存直接写到磁盘”，而是按照属性描述逐项保存。UE 会保存属性名、类型、数据和版本信息，这样资源结构变化后仍有机会做兼容。
+
+典型流程：
+
+```text
+加载 Package
+→ 创建 UObject 空实例
+→ UObject::Serialize
+→ 遍历 UClass 属性链
+→ FProperty::SerializeItem
+→ 根据属性类型读取或写入数据
+→ 修复 UObject 引用
+→ PostLoad
+```
+
+如果一个字段没有 `UPROPERTY`，默认通用序列化不会知道它存在。你可以手写 `Serialize` 处理它，但那就变成这个类自己的特殊逻辑，无法自动获得编辑器、复制、GC 等通用能力。

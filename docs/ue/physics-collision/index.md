@@ -147,3 +147,103 @@ Trace 起点终点是否正确
 
 Object Channel 描述对象身份，Trace Channel 描述查询意图。Sweep 检测运动过程，Overlap 检测当前重叠。Chaos 是底层物理系统，但 Gameplay 大多通过 Engine 的 Collision 接口使用它。碰撞问题优先按配置、响应、事件开关、查询参数逐层排查。
 
+## 12. 源码精读：LineTrace / Sweep / Overlap 入口
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Classes/Engine/World.h
+Engine/Source/Runtime/Engine/Private/Collision/WorldCollision.cpp
+Engine/Source/Runtime/Engine/Private/Collision/CollisionConversions.cpp
+```
+
+Gameplay 最常用的碰撞查询入口在 `UWorld`。它们会把高层参数转换成物理场景查询，再返回 `FHitResult` 或 Overlap 结果。
+
+调用链：
+
+```text
+UWorld::LineTraceSingleByChannel
+→ 构造 FCollisionQueryParams / FCollisionResponseParams
+→ 转换 Channel 和 Response
+→ 查询 PhysicsScene
+→ Chaos broad phase 找候选
+→ narrow phase 精确检测
+→ 填充 FHitResult
+```
+
+Sweep 和 Overlap 的区别在进入物理场景前就已经确定：Sweep 带起点、终点和形状，Overlap 只检查当前位置形状。
+
+## 13. 源码精读：MoveComponent 如何处理阻挡
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp
+Engine/Source/Runtime/Engine/Private/Components/PrimitiveComponent.cpp
+Engine/Source/Runtime/Engine/Private/Components/MovementComponent.cpp
+```
+
+移动组件通常不会直接设置位置，而是调用 `MoveUpdatedComponent`。底层会走组件移动和 Sweep 检测。
+
+流程：
+
+```text
+UMovementComponent::SafeMoveUpdatedComponent
+→ UPrimitiveComponent::MoveComponent
+→ 如果 bSweep，执行形状 Sweep
+→ 命中 Blocking Hit
+→ 返回 FHitResult
+→ MovementComponent::SlideAlongSurface 或 StepUp
+```
+
+这就是为什么角色移动、投射物移动和普通 SetActorLocation 行为不同。移动组件会把碰撞结果纳入位移计算，而裸设置位置可能直接穿透或导致后续校正。
+
+## 14. 源码精读：Collision Response 怎么合并
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Classes/Engine/EngineTypes.h
+Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h
+Engine/Source/Runtime/Engine/Private/Collision/CollisionConversions.cpp
+```
+
+每个组件有 ObjectType 和 ResponseContainer。一次 Trace 使用 TraceChannel，组件会查询自己对这个 Channel 的响应。两个物体互相移动碰撞时，还要看双方配置。
+
+判断过程：
+
+```text
+查询使用 Channel
+→ 目标组件读取 CollisionResponseToChannel
+→ Ignore 直接过滤
+→ Overlap 记录重叠
+→ Block 记录阻挡
+→ 根据 QueryParams 决定是否返回复杂碰撞、物理材质、初始重叠
+```
+
+排查碰撞问题时，不要只看发起方参数，也要看被检测组件的 ObjectType、Response、CollisionEnabled 和事件开关。
+
+## 15. 源码精读：Chaos 在这里做什么
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Experimental/Chaos/Public
+Engine/Source/Runtime/Experimental/Chaos/Private
+Engine/Source/Runtime/PhysicsCore
+```
+
+Chaos 负责底层空间加速、形状相交、刚体求解、约束和破碎。Gameplay 层通过 `UWorld` 和 `UPrimitiveComponent` 发起查询，不需要直接操作 Chaos 对象。
+
+物理模拟链路：
+
+```text
+PrimitiveComponent 创建 BodyInstance
+→ BodyInstance 创建物理 Actor/Shape
+→ PhysicsScene Tick
+→ Chaos Solver 积分速度和位置
+→ 碰撞检测和约束求解
+→ 回写组件 Transform
+```
+
+如果一个组件 `Simulate Physics`，它的位置主要由物理场景推进；如果是 CharacterMovement，它通常是 kinematic 移动，通过 Sweep 处理碰撞。

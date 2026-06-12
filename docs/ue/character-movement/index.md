@@ -227,3 +227,80 @@ ASC.OnOwnedTagUpdated
 - 网络预测下直接改 Velocity 的误差如何最小化。
 - 多个慢走来源同时存在时，是否需要做 Gait Request 栈。
 - Flight / FlightSprint 是否也需要类似地统一实时速度修正。
+
+## 10. 源码精读补充：MaxWalkSpeed 的完整生效链
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+`MaxWalkSpeed` 不是在设置瞬间把角色速度改掉，而是在移动模拟时作为速度上限参与计算。最关键的链路是：
+
+```text
+UCharacterMovementComponent::TickComponent
+→ PerformMovement
+→ StartNewPhysics
+→ PhysWalking
+→ CalcVelocity
+→ GetMaxSpeed
+→ 限制 Velocity 大小
+→ MoveAlongFloor
+→ SafeMoveUpdatedComponent
+```
+
+在 `PhysWalking` 里，角色先根据当前输入、摩擦、制动等参数计算速度，再用 `GetMaxSpeed()` 返回的上限 clamp。也就是说，`MaxWalkSpeed` 控制的是“最终速度不能超过多少”，不是“当前速度立刻变成多少”。如果加速度很小，即使 `MaxWalkSpeed` 很大，角色也需要一段时间才能到达上限。
+
+## 11. 源码精读补充：为什么改速度要同时看加速度和制动
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+`CalcVelocity` 内部会综合这些变量：
+
+```text
+Acceleration
+Velocity
+Friction
+BrakingDeceleration
+MaxSpeed
+DeltaTime
+```
+
+简化逻辑：
+
+```text
+如果没有输入，按 BrakingDeceleration 和 Friction 减速
+→ 如果有输入，按 Acceleration 增加速度
+→ 速度方向受摩擦影响
+→ 最终速度限制在 MaxSpeed
+```
+
+所以项目里从 Run 切到 Walk，如果只改 `MaxWalkSpeed`，当前速度可能还需要靠 braking 慢慢降下来。想让瞄准或手炮状态立即变慢，需要同时考虑是否主动 clamp 当前 `Velocity`，或提高该状态下的制动参数。
+
+## 12. 项目源码对应：SGPlayerCharacter 如何接入
+
+源码位置：
+
+```text
+Script/Core/GameLogic/Characters/SGPlayerCharacter.as
+Script/Core/GameLogic/Movement/SGCharacterMovementComponent.as
+Script/Core/GameLogic/Animation/SGAnimInstance_Locomotion.as
+```
+
+项目里的 gait 切换不是直接修改引擎 `MaxWalkSpeed` 字段，而是封装到角色和移动组件自己的状态里。推荐记录链路：
+
+```text
+GameplayTag 或玩家状态变化
+→ SGPlayerCharacter 判断 Aim / Handgun / Sprint / Flight
+→ SGCharacterMovementComponent 更新 GaitType 或 OrientType
+→ SGCombatCharacter / Movement 参数集更新速度
+→ AnimInstance 读取速度和状态更新 Locomotion
+```
+
+调试时要同时看三处：状态是否正确、移动组件速度是否正确、动画是否用同一套状态。否则会出现“实际速度变了，但动画还像在跑”或“动画切了，实际速度没变”。

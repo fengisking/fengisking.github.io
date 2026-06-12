@@ -189,3 +189,102 @@ Actor Destroy 后是否仍被定时器、Delegate、Lambda 捕获
 
 UE GC 的核心是反射驱动的可达性分析。UObject 的生命周期由 UObject 系统和 GC 管理，普通 C++ 智能指针不能替代这套机制。写 Gameplay 代码时，要明确强引用、弱引用、软引用和临时引用的边界。
 
+## 12. 源码精读：CollectGarbage 入口
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Public/UObject/GarbageCollection.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp
+Engine/Source/Runtime/CoreUObject/Public/UObject/UObjectArray.h
+```
+
+GC 的入口通常是 `CollectGarbage`，内部进入 `CollectGarbageInternal`。它不是简单遍历所有对象 delete，而是先建立候选集合，再从 Root 出发做可达性分析。
+
+完整流程可以拆成：
+
+```text
+CollectGarbage
+→ CollectGarbageInternal
+→ 标记当前 UObjectArray 中对象状态
+→ 从 RootSet / Cluster / KeepFlags 找起点
+→ ReachabilityAnalysis 遍历引用
+→ GatherUnreachableObjects 收集不可达对象
+→ 调用 BeginDestroy
+→ 等待 IsReadyForFinishDestroy
+→ FinishDestroy
+→ 从对象数组中释放
+```
+
+`FUObjectArray` 保存了运行时所有 UObject 项。GC 分析时不是从 C++ 栈上猜指针，而是从 UObject 系统维护的对象数组、Root 集合和反射引用图出发。这也是 UObject 必须通过 `NewObject`、`SpawnActor` 等引擎入口创建的原因之一。
+
+## 13. 源码精读：UPROPERTY 引用怎么被扫描
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Public/UObject/UnrealType.h
+Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp
+```
+
+GC 扫描 UObject 引用时，会通过 `UClass` 的属性链找到 `FObjectProperty`、`FArrayProperty`、`FMapProperty`、`FSetProperty`、`FStructProperty` 等。遇到 UObject 指针属性，就把目标对象加入引用图。
+
+逻辑可以理解为：
+
+```text
+当前 UObject
+→ 取得 UObject::GetClass()
+→ 遍历 UClass / UStruct 的 FProperty
+→ 对 ObjectProperty 读取 UObject 指针
+→ 对 StructProperty 递归结构体字段
+→ 对 Array/Map/Set 遍历容器元素
+→ Collector.AddReferencedObject
+→ 目标对象标记为可达
+```
+
+所以 `UPROPERTY()` 的意义不只是给编辑器看，它还让 GC 能知道这个字段里保存了 UObject 引用。裸指针如果没有被其他方式上报，GC 不会因为它存在而保留目标对象。
+
+## 14. 源码精读：AddReferencedObjects 的使用场景
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Public/UObject/GCObject.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp
+```
+
+非 UObject 类型没有 UClass，也没有反射属性链。如果它持有 UObject，就必须通过 `FGCObject` 或对象自己的 `AddReferencedObjects` 上报引用。
+
+典型调用关系：
+
+```text
+GC 遍历引用
+→ 发现对象有自定义 AddReferencedObjects
+→ 调用 AddReferencedObjects(FReferenceCollector&)
+→ 业务代码 Collector.AddReferencedObject(Target)
+→ Target 被标记为可达
+```
+
+常见场景是编辑器工具对象、Slate 数据对象、全局管理器里的普通 C++ 结构。如果这些结构长期持有 UObject，又没有 `UPROPERTY`，就必须手动上报，否则对象可能被 GC。
+
+## 15. 源码精读：为什么 shared_ptr 管不了 UObject
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Core/Public/Templates/SharedPointer.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp
+Engine/Source/Runtime/CoreUObject/Public/UObject/WeakObjectPtr.h
+```
+
+`TSharedPtr` 的引用计数存放在 shared pointer 控制块里，GC 的可达性分析不会扫描这个控制块。GC 只认识 Root、反射属性、手动上报和 Cluster。
+
+如果你用 `TSharedPtr<UObject>`，会产生两个生命周期系统：
+
+```text
+TSharedPtr 认为引用计数大于 0，对象还应该活着
+GC 认为对象从 Root 不可达，对象可以销毁
+```
+
+这两个系统没有统一仲裁。结果可能是 UObject 已经 `BeginDestroy` 或释放，而 shared pointer 还保存旧地址。正确做法是 UObject 用 `UPROPERTY TObjectPtr` 强引用，用 `TWeakObjectPtr` 弱引用，用 `TSoftObjectPtr` 资源路径引用；`TSharedPtr` 留给非 UObject 数据结构。

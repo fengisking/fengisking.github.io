@@ -216,3 +216,129 @@ Client correction 次数
 
 DS 是服务器权威运行环境，RPC 是跨网络事件调用，Replication 是状态同步。移动同步靠预测、服务端校正和视觉平滑维持手感。优化 DS 的核心是降低无意义的 Tick、复制、RPC、AI 和物理成本。
 
+## 13. 源码精读：Actor 复制从哪里开始
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/NetDriver.cpp
+Engine/Source/Runtime/Engine/Private/ActorReplication.cpp
+Engine/Source/Runtime/Engine/Classes/Engine/ActorChannel.h
+Engine/Source/Runtime/Engine/Private/DataChannel.cpp
+```
+
+Actor 复制不是每个属性每帧无脑发送。服务端 `UNetDriver` 会按连接遍历相关 Actor，判断 Actor 是否需要复制，找到或创建对应的 `UActorChannel`，再把属性变化和 RPC 写入网络 bunch。
+
+简化调用链：
+
+```text
+UNetDriver::ServerReplicateActors
+→ 为每个 UNetConnection 收集可相关 Actor
+→ 判断 NetCullDistance / Owner / Dormancy / NetUpdateFrequency
+→ 找到 UActorChannel
+→ UActorChannel::ReplicateActor
+→ FObjectReplicator::ReplicateProperties
+→ FRepLayout 比较 shadow state
+→ 只序列化变化属性
+→ 发送 bunch
+```
+
+这里有两个重要点。第一，相关性决定“这个连接要不要知道这个 Actor”。第二，属性复制一般会做变化检测，不是所有属性每帧都发。优化 DS 时，降低 Actor 数量、相关性范围、复制频率和属性体积，通常比微调某个 RPC 更有效。
+
+## 14. 源码精读：RPC 如何走到 ProcessEvent
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/DataChannel.cpp
+Engine/Source/Runtime/Engine/Private/ActorChannel.cpp
+Engine/Source/Runtime/CoreUObject/Private/UObject/ScriptCore.cpp
+```
+
+RPC 本质是网络序列化后的函数调用。UHT 会给 `UFUNCTION(Server)` 等函数生成必要的 wrapper 和校验信息，运行时网络层通过 ActorChannel 把函数和参数传到对端。
+
+服务端 RPC 简化链路：
+
+```text
+客户端调用 ServerFire
+→ 生成代码判断当前不是 authority
+→ 把 Function 和参数写入 UActorChannel
+→ UNetConnection 发包
+→ 服务端 NetDriver 收包
+→ UActorChannel 找到目标 Actor
+→ 反序列化 RPC 参数
+→ UObject::ProcessEvent
+→ ServerFire_Implementation
+```
+
+Reliable 的可靠性在连接和 channel 层维护，它会保证顺序和到达，但也会造成队列阻塞。高频输入、表现和可覆盖事件不要轻易 Reliable。
+
+## 15. 源码精读：CharacterMovement 的预测数据结构
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+```
+
+移动预测的关键不是位置复制，而是“客户端保存输入，服务端重演输入”。核心类型包括：
+
+```text
+FSavedMove_Character
+FNetworkPredictionData_Client_Character
+FNetworkPredictionData_Server_Character
+FCharacterNetworkMoveData
+FCharacterNetworkMoveDataContainer
+```
+
+客户端每帧移动时会保存一个 move：
+
+```text
+输入向量
+时间戳
+加速度
+压缩 flags
+移动模式
+自定义状态
+```
+
+发送链路：
+
+```text
+TickComponent
+→ ReplicateMoveToServer
+→ AllocateNewMove
+→ FSavedMove_Character::SetMoveFor
+→ PerformMovement 本地预测
+→ CallServerMove / ServerMovePacked
+→ 服务端 MoveAutonomous
+→ 服务端 PerformMovement
+```
+
+如果自定义移动状态没有写入 SavedMove，客户端和服务端会使用不同条件模拟，最后一定频繁校正。
+
+## 16. 源码精读：平滑和校正到底改了什么
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+Engine/Source/Runtime/Engine/Classes/GameFramework/Character.h
+```
+
+服务端发现客户端位置不可信时，会发校正 RPC。客户端接到后不是简单把 Mesh 瞬移过去，而是把碰撞胶囊校正到权威位置，再通过 Mesh offset 做视觉平滑。
+
+流程：
+
+```text
+ClientAdjustPosition
+→ 更新客户端权威位置、速度、移动模式
+→ 清理已确认 SavedMove
+→ 重新模拟未确认 Move
+→ SmoothCorrection
+→ 设置 MeshTranslationOffset / MeshRotationOffset
+→ SmoothClientPosition 每帧衰减 offset
+```
+
+所以调试移动抖动时，要分清 Capsule 抖还是 Mesh 抖。Capsule 是物理和碰撞真位置，Mesh 只是视觉平滑层。
