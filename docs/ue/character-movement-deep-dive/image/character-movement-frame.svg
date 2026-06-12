@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">CharacterMovement 一帧移动链路</title>
+  <desc id="desc">输入向量经过加速度、物理分支、碰撞移动和网络预测，最终更新角色位移。</desc>
+  <rect width="960" height="300" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">CharacterMovement 一帧移动链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1b2638">
+    <rect x="42" y="100" width="120" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="72" y="140">输入</text>
+    <rect x="202" y="100" width="130" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="236" y="140">Acceleration</text>
+    <rect x="372" y="100" width="140" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="400" y="140">StartNewPhysics</text>
+    <rect x="552" y="100" width="130" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="592" y="140">碰撞移动</text>
+    <rect x="722" y="100" width="150" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="754" y="130">Velocity /</text><text x="754" y="152">Network Move</text>
+    <path d="M162 134h40M332 134h40M512 134h40M682 134h40" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="250" y="236" fill="#52606d">Walking、Falling、Custom 会走不同 Phys 分支，但都要维护 Velocity 和 UpdatedComponent</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

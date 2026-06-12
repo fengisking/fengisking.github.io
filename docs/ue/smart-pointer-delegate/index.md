@@ -1,5 +1,7 @@
 # 智能指针和 Delegate 详解
 
+![智能指针和 Delegate 关系图](./image/pointer-delegate-map.svg)
+
 ## 0. 读前地图
 
 这篇文章解决两个容易混在一起的问题：普通 C++ 对象怎么管理生命周期，UObject 怎么跟 GC 协作，对象之间怎么用 Delegate 解耦通信。先记住一句话：智能指针解决所有权，Delegate 解决通知关系，它们不是同一个问题。

@@ -1,5 +1,7 @@
 # UE CharacterMovement 源码阅读：MaxWalkSpeed 到底在哪里生效
 
+![MaxWalkSpeed 生效链路](./image/max-walk-speed-flow.svg)
+
 ## 0. 读前地图
 
 这篇文章用一个具体项目问题读 CharacterMovement：为什么改了 `MaxWalkSpeed`，角色当前速度不一定立刻变成目标速度。先给结论：`MaxWalkSpeed` 是速度上限，不是当前速度赋值；当前速度由 `Acceleration`、`Friction`、`Braking`、`MovementMode`、RootMotion 和网络预测共同决定。

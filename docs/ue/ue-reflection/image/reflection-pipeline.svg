@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="280" viewBox="0 0 960 280" role="img" aria-labelledby="title desc">
+  <title id="title">UE 反射生成链路</title>
+  <desc id="desc">UCLASS、UPROPERTY 等宏经 UHT 生成 generated 文件，再注册为运行时反射对象。</desc>
+  <rect width="960" height="280" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">UE 反射生成链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="17" fill="#1f2933">
+    <rect x="52" y="96" width="150" height="84" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="85" y="130">头文件宏</text><text x="78" y="156" font-size="14">UCLASS / UPROPERTY</text>
+    <rect x="252" y="96" width="140" height="84" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="302" y="143">UHT</text>
+    <rect x="442" y="96" width="160" height="84" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="476" y="130">生成代码</text><text x="470" y="156" font-size="14">.generated.h / .gen.cpp</text>
+    <rect x="652" y="96" width="120" height="84" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="680" y="143">编译链接</text>
+    <rect x="812" y="96" width="100" height="84" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="834" y="130">运行时</text><text x="824" y="156" font-size="14">UClass</text>
+    <path d="M202 138h50M392 138h50M602 138h50M772 138h40" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="304" y="230" fill="#52606d">反射元数据服务编辑器、序列化、GC、RPC 和蓝图调用</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">机甲手感参数调试闭环</title>
+  <desc id="desc">机甲手感通过固定场景、单变量调参、记录指标、战斗验证和版本复盘形成闭环。</desc>
+  <rect width="960" height="300" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">机甲手感参数调试闭环</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1b2638">
+    <rect x="70" y="104" width="140" height="66" rx="8" fill="#fff" stroke="#c58b44"/><text x="104" y="143">固定场景</text>
+    <rect x="255" y="104" width="140" height="66" rx="8" fill="#fff" stroke="#c58b44"/><text x="288" y="143">单变量调参</text>
+    <rect x="440" y="104" width="140" height="66" rx="8" fill="#fff" stroke="#c58b44"/><text x="474" y="143">记录指标</text>
+    <rect x="625" y="104" width="140" height="66" rx="8" fill="#fff" stroke="#c58b44"/><text x="660" y="143">战斗验证</text>
+    <rect x="810" y="104" width="110" height="66" rx="8" fill="#fff" stroke="#c58b44"/><text x="834" y="143">版本复盘</text>
+    <path d="M210 137h45M395 137h45M580 137h45M765 137h45" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="270" y="232" fill="#52606d">速度、转向、镜头、动画和武器反馈要一起验证</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

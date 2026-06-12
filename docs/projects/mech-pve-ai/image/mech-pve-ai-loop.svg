@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">机甲 PVE AI 自动跑测闭环</title>
+  <desc id="desc">自动跑测 AI 从上下文采样到 Utility 评分、PlayerAction 执行、反馈恢复和日志复盘形成闭环。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">机甲 PVE AI 自动跑测闭环</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1f2933">
+    <rect x="58" y="104" width="135" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="90" y="143">上下文采样</text>
+    <rect x="238" y="104" width="135" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="284" y="143">评分</text>
+    <rect x="418" y="104" width="135" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="456" y="143">Action</text>
+    <rect x="598" y="104" width="135" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="632" y="143">反馈恢复</text>
+    <rect x="778" y="104" width="135" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="812" y="143">日志复盘</text>
+    <path d="M193 137h45M373 137h45M553 137h45M733 137h45" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M845 170v54H125v-54" fill="none" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

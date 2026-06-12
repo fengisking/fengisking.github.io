@@ -1,5 +1,7 @@
 # 如何打包一个项目
 
+![UE Build Cook Package 流程](./image/cook-package-flow.svg)
+
 ## 0. 读前地图
 
 打包文章最容易写成命令集合，但真正难点是资源为什么进包、为什么没进包、为什么编辑器能跑而包体不能跑。阅读本文时先抓住一条线：Build 产出可执行文件，Cook 产出目标平台资源，Stage 汇总运行所需文件，Package 生成可分发包。

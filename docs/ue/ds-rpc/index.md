@@ -1,5 +1,7 @@
 # DS 和 RPC 详解
 
+![UE 网络同步三条主线](./image/network-sync-lines.svg)
+
 ## 0. 读前地图
 
 这篇文章把 UE 网络拆成三条线：RPC 负责跨端调用函数，Replication 负责同步状态，CharacterMovement 用预测、校正和平滑解决“客户端手感”和“服务端权威”的矛盾。

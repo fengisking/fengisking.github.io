@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="280" viewBox="0 0 960 280" role="img" aria-labelledby="title desc">
+  <title id="title">智能指针和 Delegate 关系图</title>
+  <desc id="desc">普通 C++ 对象使用智能指针管理所有权，UObject 交给 GC，Delegate 用于解耦通知。</desc>
+  <rect width="960" height="280" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">所有权和通知关系要分开看</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="17" fill="#1b2638">
+    <rect x="70" y="100" width="220" height="96" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="112" y="136">普通 C++ 对象</text><text x="102" y="164" font-size="14">TUniquePtr / TSharedPtr</text>
+    <rect x="370" y="100" width="220" height="96" rx="8" fill="#fff" stroke="#5e9c76"/><text x="430" y="136">UObject</text><text x="410" y="164" font-size="14">UPROPERTY / TObjectPtr</text>
+    <rect x="670" y="100" width="220" height="96" rx="8" fill="#fff" stroke="#c58b44"/><text x="720" y="136">Delegate</text><text x="704" y="164" font-size="14">事件通知 / 解耦调用</text>
+    <text x="112" y="232" fill="#52606d">生命周期</text><text x="444" y="232" fill="#52606d">GC 可达性</text><text x="726" y="232" fill="#52606d">绑定与解绑</text>
+  </g>
+</svg>

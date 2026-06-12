@@ -1,5 +1,7 @@
 # Physics 和 Collision 详解
 
+![UE Collision 查询与模拟](./image/physics-collision-map.svg)
+
 ## 0. 读前地图
 
 这篇文章先把碰撞拆成两个问题：查询和模拟。查询回答“某条线、某个形状有没有碰到什么”，模拟回答“物理世界下一步应该怎么动”。Gameplay 大多数问题发生在查询参数、碰撞通道、响应规则和移动组件之间。

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">UE Collision 查询与模拟</title>
+  <desc id="desc">Trace、Sweep、Overlap 属于查询，RigidBody 和 Constraint 属于物理模拟，它们通过通道和响应规则交互。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">Collision：查询和模拟分开看</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="17" fill="#1f2933">
+    <rect x="82" y="102" width="230" height="96" rx="8" fill="#fff" stroke="#5e9c76"/><text x="152" y="136">查询</text><text x="118" y="166" font-size="14">LineTrace / Sweep / Overlap</text>
+    <rect x="365" y="102" width="230" height="96" rx="8" fill="#fff" stroke="#c58b44"/><text x="424" y="136">响应规则</text><text x="420" y="166" font-size="14">Block / Overlap / Ignore</text>
+    <rect x="648" y="102" width="230" height="96" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="724" y="136">模拟</text><text x="704" y="166" font-size="14">Chaos / RigidBody</text>
+    <path d="M312 150h53M595 150h53" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="240" y="244" fill="#52606d">Object Channel 描述对象是什么，Trace Channel 描述这次查询问什么</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

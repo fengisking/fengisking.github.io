@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="280" viewBox="0 0 960 280" role="img" aria-labelledby="title desc">
+  <title id="title">UE 源码阅读闭环</title>
+  <desc id="desc">从问题现象到源码入口、调用链、关键变量、验证实验和项目结论的闭环。</desc>
+  <rect width="960" height="280" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">UE 源码阅读闭环</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="18" fill="#1b2638">
+    <rect x="48" y="96" width="130" height="74" rx="8" fill="#ffffff" stroke="#7aa2e3"/><text x="76" y="140">问题现象</text>
+    <rect x="218" y="96" width="130" height="74" rx="8" fill="#ffffff" stroke="#7aa2e3"/><text x="246" y="140">源码入口</text>
+    <rect x="388" y="96" width="130" height="74" rx="8" fill="#ffffff" stroke="#7aa2e3"/><text x="416" y="140">调用链</text>
+    <rect x="558" y="96" width="130" height="74" rx="8" fill="#ffffff" stroke="#7aa2e3"/><text x="586" y="140">关键变量</text>
+    <rect x="728" y="96" width="150" height="74" rx="8" fill="#ffffff" stroke="#7aa2e3"/><text x="766" y="140">验证实验</text>
+    <path d="M178 133h40M348 133h40M518 133h40M688 133h40" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <path d="M803 170v40H113v-40" fill="none" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="384" y="236" fill="#52606d">结论回到项目：形成可复用调试方法</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

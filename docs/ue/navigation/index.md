@@ -1,5 +1,7 @@
 # Navigation 详解
 
+![UE Navigation 寻路链路](./image/navigation-path-flow.svg)
+
 ## 0. 读前地图
 
 这篇文章的目标不是背 API，而是把“AI 为什么能从 A 点走到 B 点”拆成四层：导航数据如何生成，路径如何查询，PathFollowing 如何驱动移动，运行时如何优化和排查。

@@ -1,5 +1,7 @@
 # Animation 详解
 
+![UE Animation Update Evaluate 链路](./image/animation-pose-flow.svg)
+
 ## 0. 读前地图
 
 这篇文章先建立动画源码的主线：`Update` 计算参数和权重，`Evaluate` 生成最终 Pose，Slot 把 Montage 插进 AnimGraph，Layered Blend per Bone 做局部叠加，AimOffset 本质是 Additive BlendSpace。

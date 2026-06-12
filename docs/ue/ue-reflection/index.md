@@ -1,5 +1,7 @@
 # UE 反射详解
 
+![UE 反射生成链路](./image/reflection-pipeline.svg)
+
 ## 0. 读前地图
 
 这篇文章要解决的是：C++ 本身没有完整运行时反射，UE 为什么还能做到编辑器属性、蓝图调用、序列化、GC 引用发现和 RPC。读源码时先抓住一条链：宏只是标记，UHT 负责解析和生成代码，运行时注册成 `UClass`、`FProperty`、`UFunction`。

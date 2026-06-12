@@ -1,5 +1,7 @@
 # World Partition 详解
 
+![World Partition 流式加载](./image/world-partition-streaming.svg)
+
 ## 0. 读前地图
 
 World Partition 的核心不是“把地图切格子”，而是运行时根据 Streaming Source 决定哪些 Runtime Cell 应该存在。阅读时先区分编辑器生成数据、运行时流送决策、Actor 生命周期三层。

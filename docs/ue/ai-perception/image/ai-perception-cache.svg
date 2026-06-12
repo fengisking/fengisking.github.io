@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">AI Perception 感知缓存链路</title>
+  <desc id="desc">StimuliSource 产生刺激，PerceptionSystem 更新感知组件缓存，状态变化时广播事件。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">AI Perception 感知缓存链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1f2933">
+    <rect x="64" y="102" width="150" height="70" rx="8" fill="#fff" stroke="#c58b44"/><text x="94" y="132">StimuliSource</text><text x="110" y="154">玩家目标</text>
+    <rect x="274" y="102" width="150" height="70" rx="8" fill="#fff" stroke="#c58b44"/><text x="300" y="132">Sense Update</text><text x="318" y="154">Sight 等</text>
+    <rect x="484" y="102" width="160" height="70" rx="8" fill="#fff" stroke="#c58b44"/><text x="516" y="132">PerceptualData</text><text x="526" y="154">感知缓存</text>
+    <rect x="704" y="102" width="160" height="70" rx="8" fill="#fff" stroke="#c58b44"/><text x="734" y="132">Updated Event</text><text x="740" y="154">边沿变化</text>
+    <path d="M214 137h60M424 137h60M644 137h60" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="238" y="238" fill="#52606d">复活不一定触发事件，关键看缓存状态有没有从失效到有效的变化</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

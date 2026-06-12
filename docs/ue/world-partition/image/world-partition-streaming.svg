@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">World Partition 流式加载</title>
+  <desc id="desc">Streaming Source 覆盖 Runtime Grid 中的 Cell，World Partition 根据目标状态加载、激活或卸载 Actor。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">World Partition 流式加载</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1f2933">
+    <rect x="70" y="96" width="190" height="92" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="108" y="132">Streaming Source</text><text x="126" y="158" font-size="14">玩家 / 镜头 / 系统</text>
+    <rect x="350" y="82" width="260" height="120" rx="8" fill="#fff" stroke="#5e9c76"/><text x="434" y="116">Runtime Grid</text><path d="M374 136h210M374 166h210M424 106v78M484 106v78M544 106v78" stroke="#d0d7de"/>
+    <rect x="700" y="96" width="180" height="92" rx="8" fill="#fff" stroke="#c58b44"/><text x="736" y="132">Load / Activate</text><text x="758" y="158" font-size="14">Actor 生命周期</text>
+    <path d="M260 142h90M610 142h90" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

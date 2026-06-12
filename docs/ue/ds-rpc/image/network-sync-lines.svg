@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" role="img" aria-labelledby="title desc">
+  <title id="title">UE 网络同步三条主线</title>
+  <desc id="desc">RPC、属性复制和 CharacterMovement 预测校正是 UE 网络同步的三条不同主线。</desc>
+  <rect width="960" height="320" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">UE 网络同步三条主线</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="17" fill="#1b2638">
+    <rect x="76" y="92" width="210" height="56" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="116" y="127">RPC：跨端调用函数</text>
+    <rect x="76" y="162" width="210" height="56" rx="8" fill="#fff" stroke="#5e9c76"/><text x="116" y="197">Replication：同步状态</text>
+    <rect x="76" y="232" width="210" height="56" rx="8" fill="#fff" stroke="#c58b44"/><text x="102" y="267">Movement：预测和校正</text>
+    <rect x="390" y="122" width="170" height="94" rx="8" fill="#fff" stroke="#9aa5b1"/><text x="428" y="160">ActorChannel</text><text x="420" y="186" font-size="14">Bunch / Connection</text>
+    <rect x="680" y="122" width="170" height="94" rx="8" fill="#fff" stroke="#9aa5b1"/><text x="732" y="160">Client</text><text x="725" y="186" font-size="14">表现和回放</text>
+    <path d="M286 120h104M286 190h104M286 260c70 0 70-44 104-44M560 169h120" fill="none" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

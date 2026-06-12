@@ -1,5 +1,7 @@
 # UE 运行时问题解答
 
+![Actor 运行时生命周期](./image/actor-runtime-lifecycle.svg)
+
 ## 0. 读前地图
 
 这篇是运行时生命周期速查。读源码时不要把 Actor 创建、组件创建、Construction Script、组件注册、BeginPlay、Tick 混成一件事。它们发生在不同阶段，也服务不同系统。

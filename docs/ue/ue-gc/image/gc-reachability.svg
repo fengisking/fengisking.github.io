@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">UE GC 可达性分析</title>
+  <desc id="desc">GC 从 RootSet 出发，经反射属性、手动引用和 Cluster 标记可达对象，剩余对象进入销毁流程。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">UE GC 可达性分析</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="17" fill="#1f2933">
+    <circle cx="130" cy="145" r="54" fill="#fff" stroke="#5e9c76" stroke-width="2"/><text x="95" y="151">RootSet</text>
+    <rect x="265" y="76" width="155" height="56" rx="8" fill="#fff" stroke="#5e9c76"/><text x="298" y="111">UPROPERTY</text>
+    <rect x="265" y="158" width="155" height="56" rx="8" fill="#fff" stroke="#5e9c76"/><text x="294" y="193">AddReferenced</text>
+    <rect x="500" y="116" width="150" height="70" rx="8" fill="#fff" stroke="#5e9c76"/><text x="536" y="157">可达对象</text>
+    <rect x="735" y="116" width="150" height="70" rx="8" fill="#fff0f0" stroke="#d66a6a"/><text x="768" y="157">不可达销毁</text>
+    <path d="M184 130l80-25M184 160l80 25M420 104l80 36M420 186l80-35M650 151h85" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="280" y="254" fill="#52606d">裸 UObject* 不在这条引用链上，GC 不会因为它保活对象</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

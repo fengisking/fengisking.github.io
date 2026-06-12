@@ -1,5 +1,7 @@
 # UE AI Perception：死亡复活后感知为什么不刷新
 
+![AI Perception 感知缓存链路](./image/ai-perception-cache.svg)
+
 ## 0. 读前地图
 
 这篇文章不是泛讲 AI Perception，而是用“死亡复活后不重新触发感知”这个具体问题带读源码。核心结论是：Perception 不是每帧看见目标就广播，它维护的是刺激状态和感知缓存。复活如果没有制造“状态边沿变化”，外层逻辑就可能收不到新的感知事件。

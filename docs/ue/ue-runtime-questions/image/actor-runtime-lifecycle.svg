@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="280" viewBox="0 0 960 280" role="img" aria-labelledby="title desc">
+  <title id="title">Actor 运行时生命周期</title>
+  <desc id="desc">Actor 从 SpawnActor 到构造、Construction Script、组件注册、BeginPlay、Tick 和销毁的顺序。</desc>
+  <rect width="960" height="280" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">Actor 运行时生命周期</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="15" fill="#1f2933">
+    <rect x="38" y="102" width="120" height="64" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="64" y="140">SpawnActor</text>
+    <rect x="188" y="102" width="120" height="64" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="218" y="128">C++ 构造</text><text x="214" y="150">默认组件</text>
+    <rect x="338" y="102" width="130" height="64" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="358" y="128">Construction</text><text x="374" y="150">Script</text>
+    <rect x="498" y="102" width="130" height="64" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="526" y="140">注册组件</text>
+    <rect x="658" y="102" width="100" height="64" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="678" y="140">BeginPlay</text>
+    <rect x="788" y="102" width="100" height="64" rx="8" fill="#fff" stroke="#6c9bd2"/><text x="820" y="140">Tick</text>
+    <path d="M158 134h30M308 134h30M468 134h30M628 134h30M758 134h30" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="258" y="222" fill="#52606d">组件创建、注册和 Tick 是不同阶段，调试时要分开断点</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

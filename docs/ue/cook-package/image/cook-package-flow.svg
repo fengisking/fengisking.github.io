@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="280" viewBox="0 0 960 280" role="img" aria-labelledby="title desc">
+  <title id="title">UE Build Cook Package 流程</title>
+  <desc id="desc">项目打包包含 Build、Cook、Stage、Package 和 Archive 阶段。</desc>
+  <rect width="960" height="280" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">BuildCookRun 主流程</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="17" fill="#1b2638">
+    <rect x="64" y="106" width="120" height="66" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="102" y="145">Build</text>
+    <rect x="228" y="106" width="120" height="66" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="268" y="145">Cook</text>
+    <rect x="392" y="106" width="120" height="66" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="432" y="145">Stage</text>
+    <rect x="556" y="106" width="120" height="66" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="590" y="145">Package</text>
+    <rect x="720" y="106" width="120" height="66" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="754" y="145">Archive</text>
+    <path d="M184 139h44M348 139h44M512 139h44M676 139h44" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="242" y="226" fill="#52606d">资源缺失通常要回到 Cook 的引用收集规则里排查</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

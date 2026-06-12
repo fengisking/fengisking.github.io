@@ -1,5 +1,7 @@
 # CharacterMovement 详解
 
+![CharacterMovement 一帧移动链路](./image/character-movement-frame.svg)
+
 ## 0. 读前地图
 
 这篇文章目标是从“一帧输入”追到“最终位移”，再追到“网络预测和校正”。不要把 CharacterMovement 理解成速度组件，它同时负责输入加速度、地面检测、碰撞移动、移动模式、RootMotion、客户端预测、服务端校正和视觉平滑。

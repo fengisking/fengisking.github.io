@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">UE 渲染可修改入口</title>
+  <desc id="desc">渲染风格可以从材质、后处理、Shading Model、Renderer Pass 和 RHI 多个层级修改。</desc>
+  <rect width="960" height="300" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">渲染风格修改入口</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1b2638">
+    <rect x="60" y="112" width="130" height="64" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="100" y="150">材质</text>
+    <rect x="230" y="112" width="130" height="64" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="274" y="150">后处理</text>
+    <rect x="400" y="112" width="150" height="64" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="428" y="150">Shading Model</text>
+    <rect x="590" y="112" width="130" height="64" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="624" y="150">Renderer</text>
+    <rect x="760" y="112" width="130" height="64" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="810" y="150">RHI</text>
+    <path d="M190 144h40M360 144h40M550 144h40M720 144h40" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="194" y="232" fill="#52606d">越往右成本越高，越需要源码和平台图形 API 能力</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

@@ -1,5 +1,7 @@
 # UE 的 GC 详解
 
+![UE GC 可达性分析](./image/gc-reachability.svg)
+
 ## 0. 读前地图
 
 这篇文章先回答一个核心问题：GC 到底根据什么判断 UObject 还能不能活。答案不是“C++ 里还有没有指针”，而是“能不能从 RootSet 沿 UE 认可的引用路径走到它”。认可路径包括反射属性、`AddReferencedObjects`、Cluster、Root 等。

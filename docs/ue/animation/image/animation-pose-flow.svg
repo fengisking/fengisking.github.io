@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">UE Animation Update Evaluate 链路</title>
+  <desc id="desc">Animation Update 计算参数和权重，Evaluate 生成 Pose，Slot、Layered Blend 和 AimOffset 参与最终姿态。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">Animation：Update 和 Evaluate 分开看</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1f2933">
+    <rect x="58" y="104" width="130" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="96" y="143">Update</text>
+    <rect x="238" y="104" width="140" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="270" y="132">参数 / 权重</text><text x="284" y="154">状态机</text>
+    <rect x="428" y="104" width="130" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="462" y="143">Evaluate</text>
+    <rect x="608" y="104" width="140" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="642" y="132">Slot / Layer</text><text x="654" y="154">AimOffset</text>
+    <rect x="798" y="104" width="110" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="834" y="143">Pose</text>
+    <path d="M188 138h50M378 138h50M558 138h50M748 138h50" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="248" y="238" fill="#52606d">Montage 覆盖范围取决于 Slot 在 AnimGraph 中的接入位置</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>
