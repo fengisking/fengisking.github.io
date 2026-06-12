@@ -1,5 +1,9 @@
 # 潘天峰的主页
 
+## 推荐阅读顺序
+
+如果是从零开始补 UE 源码能力，建议先读 `UE 学习路线和源码阅读方法`，再读反射、GC、Actor/Component/Tick 这些运行时基础。理解对象系统后，再进入 CharacterMovement、DS/RPC、Animation、Navigation 和 Physics；最后读 Cook、Insights、World Partition 和引擎升级，把源码理解落到工程排查和项目交付里。
+
 ## UE 文章
 
 ### 学习路线

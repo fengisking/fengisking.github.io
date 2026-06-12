@@ -1,5 +1,40 @@
 # DS 和 RPC 详解
 
+## 0. 读前地图
+
+这篇文章把 UE 网络拆成三条线：RPC 负责跨端调用函数，Replication 负责同步状态，CharacterMovement 用预测、校正和平滑解决“客户端手感”和“服务端权威”的矛盾。
+
+源码入口：
+
+```text
+UNetDriver：网络驱动和连接管理
+UNetConnection：单个连接
+UActorChannel：Actor 复制通道
+RepLayout：属性复制布局
+CharacterMovementComponent：移动预测和校正
+```
+
+建议断点：
+
+```text
+UNetDriver::ServerReplicateActors
+UActorChannel::ReplicateActor
+UActorChannel::ProcessBunch
+UCharacterMovementComponent::ReplicateMoveToServer
+UCharacterMovementComponent::ServerMove_PerformMovement
+UCharacterMovementComponent::ClientAdjustPosition_Implementation
+```
+
+关键变量：
+
+```text
+Role / RemoteRole：网络身份
+ActorChannel：Actor 在连接上的通道
+FOutBunch / FInBunch：网络数据片段
+FSavedMove_Character：客户端移动历史
+NetworkSmoothingMode：客户端校正后的表现平滑方式
+```
+
 ## 1. 问题背景
 
 DS 通常指 Dedicated Server。UE 的联机模型是服务器权威：客户端负责输入和表现，服务端负责最终状态。RPC 解决的是“某个对象上的某个函数要跨网络调用”的问题，Replication 解决的是“某个对象状态要同步到其他端”的问题。移动预测、平滑和校正则解决客户端操作手感和服务器权威之间的矛盾。
@@ -342,3 +377,96 @@ ClientAdjustPosition
 ```
 
 所以调试移动抖动时，要分清 Capsule 抖还是 Mesh 抖。Capsule 是物理和碰撞真位置，Mesh 只是视觉平滑层。
+
+## 源码精读补充：从 RPC 到移动校正的调试路径
+
+读前目标：这篇文章要能让读者分清三件事：普通 RPC 怎么发送，属性复制怎么走，CharacterMovement 为什么不是普通 RPC 一句 `SetActorLocation`。
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/ActorChannel.cpp
+Engine/Source/Runtime/Engine/Private/NetDriver.cpp
+Engine/Source/Runtime/Engine/Private/NetConnection.cpp
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+Engine/Source/Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h
+```
+
+建议断点：
+
+```text
+UNetDriver::ServerReplicateActors
+UActorChannel::ReplicateActor
+UActorChannel::ProcessBunch
+UCharacterMovementComponent::ReplicateMoveToServer
+UCharacterMovementComponent::ServerMove_PerformMovement
+UCharacterMovementComponent::ClientAdjustPosition_Implementation
+```
+
+关键变量：
+
+```text
+UNetConnection：一条客户端连接，决定数据发给谁
+UActorChannel：Actor 在某条连接上的复制通道
+FOutBunch / FInBunch：网络序列化后的数据包片段
+Role / RemoteRole：决定对象当前网络身份
+FSavedMove_Character：客户端保存的可重放移动输入
+NetworkSmoothingMode：决定校正后 Mesh 怎么平滑
+```
+
+RPC 数据流：
+
+```text
+调用 UFUNCTION(Server / Client / NetMulticast)
+→ 检查拥有连接和调用权限
+→ 序列化函数参数到 Bunch
+→ 经 ActorChannel 发到目标连接
+→ 目标端反序列化
+→ ProcessEvent 调用对应函数实现
+```
+
+移动预测数据流：
+
+```text
+客户端本地 PerformMovement
+→ 保存 FSavedMove
+→ ServerMove 把输入和时间戳发给服务端
+→ 服务端按同样输入模拟
+→ 误差超过阈值则 ClientAdjustPosition
+→ 客户端校正 Capsule
+→ 重放未确认 SavedMove
+→ Mesh 使用平滑 offset 减少视觉跳变
+```
+
+伪代码精读：
+
+```cpp
+ClientTick()
+{
+    PerformMovementLocally();
+    SaveMoveForReplay();
+    SendServerMove();
+}
+
+ServerMove()
+{
+    PerformMovementAuthoritatively();
+    if (PositionErrorTooLarge)
+        SendClientCorrection();
+}
+```
+
+优化 DS 消耗时，优先级应该是减少“不必要复制”，而不是把所有 RPC 改成 Unreliable。先看 Actor 是否需要 AlwaysRelevant，再看 NetUpdateFrequency、Replication Graph、Dormancy、属性变更频率和 RPC 参数体积。
+
+调试验证方法：
+
+1. PIE 开 Dedicated Server 和两个客户端。
+2. 打开网络模拟延迟，观察移动校正频率。
+3. 用 Network Profiler 或 Unreal Insights Networking 看 RPC 数量和带宽。
+4. 在 `ServerMove_PerformMovement` 和 `ClientAdjustPosition_Implementation` 断点，确认抖动是服务端校正还是本地表现层问题。
+
+常见误区：
+
+- Reliable 只保证可靠送达和顺序，不保证“立即到达”，也不适合高频输入。
+- Unreliable 不是低质量 RPC，适合可丢弃、下一帧会覆盖的数据。
+- DS 优化不是只优化网络包，还要看服务器 Tick、寻路、碰撞和 AI 计算。

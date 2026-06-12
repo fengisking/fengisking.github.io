@@ -1,5 +1,58 @@
 # 怎么升级引擎？
 
+## 0. 读前地图
+
+引擎升级的本质是“控制变量的迁移实验”。不要一边升级引擎，一边改玩法，一边更新插件，一边重做资源。优秀的升级流程应该能回答：旧版本基线是什么，新版本改坏了什么，问题属于编译、资源、运行时、渲染、物理、网络还是打包链路。
+
+优先检查入口：
+
+```text
+uproject EngineAssociation：项目绑定的引擎版本
+GenerateProjectFiles：工程文件生成
+UnrealBuildTool：C++ 和模块编译
+AutomationTool / RunUAT：Cook、Package、Archive
+DefaultEngine.ini / Platform 配置：运行时行为差异
+插件 .uplugin / Build.cs：兼容性和模块依赖
+```
+
+建议保留的基线：
+
+```text
+旧版本完整编译日志
+旧版本 Cook / Package 日志
+关键地图进入截图或录像
+性能基线：帧耗时、内存、加载时间、网络带宽
+自动化测试或 Smoke Test 结果
+线上插件和平台 SDK 版本
+```
+
+关键变量：
+
+```text
+EngineAssociation：项目当前绑定的引擎版本
+Target.cs / Build.cs：编译目标和模块依赖
+DefaultEngine.ini：运行时配置差异
+uplugin EnabledByDefault：插件是否默认启用
+Cook 平台参数：决定资源序列化和平台裁剪
+SDK / Toolchain：平台编译和打包链路依赖
+```
+
+最小升级闭环：
+
+```text
+新建 upgrade 分支
+→ 只切引擎版本
+→ 生成项目文件
+→ 修编译
+→ 修插件
+→ 启动编辑器
+→ 修蓝图和资源
+→ 跑关键地图
+→ 打包
+→ 对比性能和行为
+→ 再合并业务改动
+```
+
 ## 1. 问题背景
 
 引擎升级不是“直接用新版本打开项目”。比如从 5.6 升到 5.7，真正风险来自 C++ API 改动、插件兼容、蓝图重编译、资源版本升级、渲染和物理行为变化、打包链路变化、平台 SDK 变化。正确做法是把升级当成一次工程迁移，而不是一次编辑器启动。

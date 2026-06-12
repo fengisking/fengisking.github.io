@@ -1,5 +1,50 @@
 # 机甲手感参数
 
+## 0. 读前地图
+
+这篇文章把“手感”拆成可调、可测、可复盘的参数系统。优秀的手感调参不是凭感觉反复拖滑条，而是把玩家体验拆成输入响应、速度变化、转向半径、镜头反馈、动画匹配和武器节奏，再用固定场景验证。
+
+核心源码入口：
+
+```text
+Core/GameLogic/Characters/SGPlayerCharacter.as
+Core/GameLogic/Movement/SGCharacterMovementComponent.as
+Core/GameLogic/Animation/SGAnimInstance_Locomotion.as
+Core/GameLogic/PlayerAction/SGPlayerLookAction.as
+Core/Combat/Ability/SGGameplayAbilityBase.as
+```
+
+关键变量：
+
+```text
+GaitType：Walk、Run、Sprint 等步态状态
+MaxWalkSpeed / MaxFlySpeed：移动速度上限
+Velocity：当前真实速度
+RotationRate / AimRotation：转向和瞄准朝向
+FOV / CameraLag：镜头速度感
+Montage / AnimState：动画是否匹配当前移动状态
+```
+
+调参验证闭环：
+
+```text
+固定一张测试地图
+→ 固定起点和目标点
+→ 分别测试起步、刹停、转向、瞄准、冲刺、飞行
+→ 记录到达时间、刹停距离、转向半径、镜头晕动感
+→ 调一个参数只验证一个结论
+→ 保存手感版本和改动原因
+```
+
+常见误区：
+
+```text
+只改最高速度，忽略加速度和刹车
+只看动画，不看实际位移
+只在空地图调参，不在战斗压力下验证
+移动、镜头、武器各自舒服，但组合后节奏冲突
+```
+
 ## 1. 问题背景
 
 机甲手感不是单个速度参数决定的。玩家感受到的是输入响应、加速、减速、转向、瞄准、镜头、动画、武器反馈、受击反馈和网络延迟的综合结果。如果只调 `MaxWalkSpeed`，很容易出现“速度对了但不重”“转向飘”“瞄准割裂”“冲刺没有爆发力”的问题。

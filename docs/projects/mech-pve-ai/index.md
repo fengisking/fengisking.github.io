@@ -1,5 +1,51 @@
 # 机甲 PVE AI 自动跑测设计
 
+## 0. 读前地图
+
+这篇复盘关注的不是“做一个 AI 代替玩家”，而是“做一个能长期、稳定、可复现地跑完整 PVE 闭环的测试执行器”。判断方案好坏的标准不是 AI 像不像真人，而是它能不能暴露地图、战斗、补给、撤离和交互链路里的问题。
+
+最小闭环：
+
+```text
+采样世界状态
+→ 评估当前目标
+→ 选择 PlayerAction
+→ 执行动作
+→ 观察结果
+→ 失败恢复或记录现场
+```
+
+核心源码入口：
+
+```text
+Core/GameLogic/GameManager/SGPlayerContextManager.as
+Core/GameLogic/PlayerAction/SGUtilityEvaluatorComponent.as
+Core/GameLogic/PlayerAction/SGPlayerActionBase.as
+Core/GameLogic/PlayerAction/SGPlayerMoveAction.as
+Core/GameLogic/PlayerAction/SGPlayerLookAction.as
+Core/Combat/Ability/PassiveAbility/SGGA_Passive_LockOnTarget.as
+```
+
+关键变量：
+
+```text
+玩家状态：位置、血量、弹药、是否存活、是否在交互
+目标状态：敌人、虫穴、POI、撤离点、补给点
+评分状态：距离、危险度、收益、失败次数、冷却时间
+动作状态：当前 Action、执行时间、完成条件、失败原因
+```
+
+可验证指标：
+
+```text
+单 Seed 是否能完成完整流程
+多 Seed 完成率和平均耗时
+失败原因是否可分类
+卡死后是否能恢复
+日志是否能定位到具体目标和动作
+改动后是否能对比成功率变化
+```
+
 ## 1. 项目背景
 
 项目目标是让 AI 像玩家一样在 PCG 地图中完成一局 PVE 流程：

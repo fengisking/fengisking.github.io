@@ -1,5 +1,38 @@
 # UE 的 GC 详解
 
+## 0. 读前地图
+
+这篇文章先回答一个核心问题：GC 到底根据什么判断 UObject 还能不能活。答案不是“C++ 里还有没有指针”，而是“能不能从 RootSet 沿 UE 认可的引用路径走到它”。认可路径包括反射属性、`AddReferencedObjects`、Cluster、Root 等。
+
+源码入口：
+
+```text
+GarbageCollection.cpp：GC 主流程
+Object.h / ObjectMacros.h：UObject 标记和 UPROPERTY
+WeakObjectPtr.h：弱引用校验
+UObjectArray：全局 UObject 集合
+```
+
+建议断点：
+
+```text
+CollectGarbage
+MarkObjectsAsUnreachable
+TFastReferenceCollector::ProcessObjectArray
+UObject::BeginDestroy
+IncrementalPurgeGarbage
+```
+
+关键变量：
+
+```text
+RootSet：可达性分析起点
+GUObjectArray：GC 扫描对象集合
+Unreachable：不可达标记
+AddReferencedObjects：手动上报引用
+Cluster：批量管理强相关对象
+```
+
 ## 1. 问题背景
 
 UE 的 UObject 不使用普通 C++ 的 `delete` 管理生命周期，而是由 UObject 系统统一分配、注册和垃圾回收。GC 的目标是自动清理不再可达的 UObject，同时保证编辑器、蓝图、资源加载、网络复制、序列化和异步加载都能安全协作。
@@ -288,3 +321,75 @@ GC 认为对象从 Root 不可达，对象可以销毁
 ```
 
 这两个系统没有统一仲裁。结果可能是 UObject 已经 `BeginDestroy` 或释放，而 shared pointer 还保存旧地址。正确做法是 UObject 用 `UPROPERTY TObjectPtr` 强引用，用 `TWeakObjectPtr` 弱引用，用 `TSoftObjectPtr` 资源路径引用；`TSharedPtr` 留给非 UObject 数据结构。
+
+## 源码精读补充：从 RootSet 到 Sweep 的完整闭环
+
+读前目标：这篇文章要让读者能判断一个 UObject 为什么活着、为什么被回收，以及项目里应该用 `UPROPERTY`、`TWeakObjectPtr`、`TSoftObjectPtr` 还是 `AddReferencedObjects`。
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Private/UObject/GarbageCollection.cpp
+Engine/Source/Runtime/CoreUObject/Public/UObject/Object.h
+Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+Engine/Source/Runtime/CoreUObject/Public/UObject/WeakObjectPtr.h
+```
+
+建议断点：
+
+```text
+CollectGarbage
+MarkObjectsAsUnreachable
+TFastReferenceCollector::ProcessObjectArray
+UObject::BeginDestroy
+IncrementalPurgeGarbage
+```
+
+关键变量：
+
+```text
+GUObjectArray：全局 UObject 管理数组，GC 扫描对象集合从这里来
+RootSet：强制作为可达性起点的对象集合
+RF_RootSet：对象被加入 Root 后的标记
+Unreachable 标记：Mark 阶段后仍不可达的对象会进入销毁流程
+FGCObject / AddReferencedObjects：手动把非 UPROPERTY 引用上报给 GC
+Cluster：把一组强相关对象合并扫描，减少遍历成本
+```
+
+数据流：
+
+```text
+CollectGarbage 发起
+→ 从 RootSet、Native 引用、反射属性、AddReferencedObjects 收集引用
+→ 标记所有可达 UObject
+→ 没被标记的 UObject 变成不可达
+→ BeginDestroy 释放外部资源
+→ Sweep / Purge 移除对象内存和全局索引
+```
+
+伪代码精读：
+
+```cpp
+CollectGarbage()
+{
+    MarkAllObjectsUnreachable();
+    MarkReachableObjectsFromRoots();
+    CallBeginDestroyForUnreachableObjects();
+    PurgeObjectsWhenReady();
+}
+```
+
+看 GC 源码时不要被线程调度和增量回收细节带偏，先抓住“可达性分析”这一条主线。GC 不关心 C++ 局部变量是不是还保存了地址，只关心它能不能从根集合沿 UE 认可的引用路径走到这个对象。
+
+调试验证方法：
+
+1. 写一个 UObject 字段，不加 `UPROPERTY`，运行时只用裸指针保存。
+2. 主动调用一次 GC，观察对象是否进入 `BeginDestroy`。
+3. 改成 `UPROPERTY(TObjectPtr<>)` 后再次验证。
+4. 如果对象放在非 UObject 容器里，再用 `FGCObject::AddReferencedObjects` 上报引用。
+
+常见误区：
+
+- `TWeakObjectPtr` 不保活，只能安全判断对象是否还活着。
+- `TSoftObjectPtr` 保存的是资源路径，不等于内存里已经加载并保活。
+- `AddToRoot` 能保活，但项目代码里滥用会制造泄漏和卸载失败。

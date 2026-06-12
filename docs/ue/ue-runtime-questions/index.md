@@ -1,5 +1,58 @@
 # UE 运行时问题解答
 
+## 0. 读前地图
+
+这篇是运行时生命周期速查。读源码时不要把 Actor 创建、组件创建、Construction Script、组件注册、BeginPlay、Tick 混成一件事。它们发生在不同阶段，也服务不同系统。
+
+建议先记住这条主线：
+
+```text
+SpawnActor
+→ StaticConstructObject_Internal
+→ C++ 构造 / 默认子对象
+→ PostSpawnInitialize
+→ ExecuteConstruction / Construction Script
+→ RegisterAllComponents
+→ BeginPlay
+→ Tick
+→ EndPlay / Destroyed
+```
+
+优先阅读源码：
+
+```text
+Engine/Source/Runtime/Engine/Private/LevelActor.cpp
+Engine/Source/Runtime/Engine/Private/Actor.cpp
+Engine/Source/Runtime/Engine/Private/Components/ActorComponent.cpp
+Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp
+Engine/Source/Runtime/Engine/Private/LevelTick.cpp
+Engine/Source/Runtime/Core/Private/Async/TaskGraph.cpp
+```
+
+建议断点：
+
+```text
+UWorld::SpawnActor
+StaticConstructObject_Internal
+AActor::PostSpawnInitialize
+AActor::ExecuteConstruction
+AActor::RegisterAllComponents
+UActorComponent::RegisterComponentWithWorld
+AActor::Tick
+UActorComponent::TickComponent
+```
+
+关键变量：
+
+```text
+CreationMethod：组件来自 Native、SCS 还是 Instance
+bHasBeenCreated / bRegistered / bHasBegunPlay：组件生命周期状态
+PrimaryActorTick：Actor Tick 配置
+PrimaryComponentTick：Component Tick 配置
+TickGroup：本 Tick 运行在哪个阶段
+Prerequisites：Tick 依赖顺序
+```
+
 ## 1. Actor 是什么时候创建组件的？
 
 Actor 组件来源有三类：

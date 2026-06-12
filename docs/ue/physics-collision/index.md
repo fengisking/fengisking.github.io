@@ -1,5 +1,51 @@
 # Physics 和 Collision 详解
 
+## 0. 读前地图
+
+这篇文章先把碰撞拆成两个问题：查询和模拟。查询回答“某条线、某个形状有没有碰到什么”，模拟回答“物理世界下一步应该怎么动”。Gameplay 大多数问题发生在查询参数、碰撞通道、响应规则和移动组件之间。
+
+优先阅读源码：
+
+```text
+UWorld：LineTrace / Sweep / Overlap 的 Gameplay 入口
+UPrimitiveComponent：组件碰撞、移动和 Overlap 事件入口
+FCollisionQueryParams：一次查询的过滤参数
+FCollisionResponseParams：对象对各通道的响应
+Chaos Scene：底层物理查询和模拟
+```
+
+建议断点：
+
+```text
+UWorld::LineTraceSingleByChannel
+UWorld::SweepSingleByChannel
+UPrimitiveComponent::MoveComponentImpl
+UPrimitiveComponent::UpdateOverlapsImpl
+FBodyInstance::OverlapMulti
+```
+
+关键变量：
+
+```text
+TraceChannel：这次查询问什么问题
+ObjectType：被查询对象是什么类型
+CollisionEnabled：QueryOnly、PhysicsOnly、QueryAndPhysics
+CollisionResponse：Block、Overlap、Ignore
+FCollisionShape：线、球、胶囊、盒子等查询形状
+FHitResult：命中点、法线、组件、骨骼、穿透信息
+```
+
+最小调试闭环：
+
+```text
+画 Debug Trace
+→ 确认 TraceChannel
+→ 查看被测组件 ObjectType
+→ 查看该组件对 TraceChannel 的 Response
+→ 断到 SweepSingleByChannel
+→ 看 FHitResult 是否 bBlockingHit 或 bStartPenetrating
+```
+
 ## 1. 问题背景
 
 UE 的碰撞系统用于查询、阻挡、触发和物理模拟。Gameplay 里大部分问题都和碰撞有关：子弹打不到、角色卡住、Overlap 不触发、Sweep 结果不对、物理对象抖动、Trace Channel 配错。UE5 使用 Chaos 作为物理系统。

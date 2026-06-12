@@ -1,5 +1,52 @@
 # World Partition 详解
 
+## 0. 读前地图
+
+World Partition 的核心不是“把地图切格子”，而是运行时根据 Streaming Source 决定哪些 Runtime Cell 应该存在。阅读时先区分编辑器生成数据、运行时流送决策、Actor 生命周期三层。
+
+优先阅读源码：
+
+```text
+UWorldPartition：世界分区系统入口
+UWorldPartitionRuntimeCell：运行时 Cell
+FWorldPartitionStreamingSource：加载源
+WorldPartitionStreamingGeneration：编辑器生成运行时数据
+LevelStreamingDynamic / Package 加载：Cell 实际加载
+DataLayerSubsystem：数据层开关影响加载规则
+```
+
+建议断点：
+
+```text
+UWorldPartition::Tick
+UWorldPartition::UpdateStreamingState
+UWorldPartitionRuntimeCell::Load
+UWorldPartitionRuntimeCell::Unload
+UWorldPartitionSubsystem::RegisterStreamingSourceProvider
+```
+
+关键变量：
+
+```text
+RuntimeGrid：运行时网格配置
+RuntimeCell：最小流送单元
+StreamingSource：玩家、镜头或系统注册的加载源
+TargetState：Loaded 或 Activated
+DataLayerInstance：控制一批 Actor 是否参与流送
+HLODLayer：远景替代资源配置
+```
+
+最小调试闭环：
+
+```text
+打开 World Partition 调试显示
+→ 移动玩家或 Streaming Source
+→ 观察 Runtime Cell 状态变化
+→ 断到 UpdateStreamingState
+→ 看某个 Cell 为什么被 Load / Activate / Unload
+→ 检查对应 Actor 的 BeginPlay / EndPlay 是否符合预期
+```
+
 ## 1. 问题背景
 
 World Partition 用于大世界流式加载。传统关卡需要手动拆子关卡，World Partition 把世界按网格划分，根据玩家位置、Streaming Source、Data Layer 等规则自动加载和卸载 Actor。

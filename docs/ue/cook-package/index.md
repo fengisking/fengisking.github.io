@@ -1,5 +1,50 @@
 # 如何打包一个项目
 
+## 0. 读前地图
+
+打包文章最容易写成命令集合，但真正难点是资源为什么进包、为什么没进包、为什么编辑器能跑而包体不能跑。阅读本文时先抓住一条线：Build 产出可执行文件，Cook 产出目标平台资源，Stage 汇总运行所需文件，Package 生成可分发包。
+
+优先阅读源码和工具：
+
+```text
+RunUAT：自动化打包入口
+UnrealBuildTool：C++ 编译和 Target/Module 解析
+CookCommandlet：Cook 主流程
+AssetManager：PrimaryAsset 和软引用收集
+AssetRegistry：Cook 后运行时资源索引
+```
+
+建议断点和日志：
+
+```text
+UCookCommandlet::Main
+UCookOnTheFlyServer::StartCookByTheBook
+UAssetManager::ModifyCook
+FAssetRegistryGenerator::SaveManifests
+LogCook / LogAssetRegistry / LogStreaming
+```
+
+关键变量：
+
+```text
+CookByTheBookOptions：本次 Cook 的模式和平台
+TargetPlatform：目标平台序列化规则
+PackagesToCook：最终决定进入 Cook 的 Package 集合
+PrimaryAssetId：AssetManager 管理资源的主键
+SoftObjectPath：软引用路径，是否进包取决于收集规则
+```
+
+最小调试闭环：
+
+```text
+命令行 RunUAT BuildCookRun
+→ 打开 Cook 日志
+→ 搜索缺失资源路径
+→ 判断它是硬引用、软引用还是动态拼路径
+→ 检查 AssetManager / PrimaryAssetLabel / AlwaysCookDirectories
+→ 用打包产物验证运行时加载
+```
+
 ## 1. 问题背景
 
 UE 打包不是简单把工程复制出去。它包含编译、Cook、Stage、Package、Archive 等阶段。很多线上资源缺失、蓝图类找不到、软引用没打进去、平台配置不一致的问题，都出在 Cook 和资源引用关系上。

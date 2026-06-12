@@ -1,5 +1,51 @@
 # 智能指针和 Delegate 详解
 
+## 0. 读前地图
+
+这篇文章解决两个容易混在一起的问题：普通 C++ 对象怎么管理生命周期，UObject 怎么跟 GC 协作，对象之间怎么用 Delegate 解耦通信。先记住一句话：智能指针解决所有权，Delegate 解决通知关系，它们不是同一个问题。
+
+优先阅读源码：
+
+```text
+SharedPointer.h：TSharedPtr / TWeakPtr 的引用计数实现
+UniquePtr.h：TUniquePtr 的独占所有权
+ObjectPtr.h：TObjectPtr 和 UObject 引用包装
+WeakObjectPtr.h：TWeakObjectPtr 的弱引用校验
+Delegate.h / DelegateInstancesImpl.h：Delegate 绑定和执行
+MulticastDelegateBase.h：多播 Delegate 的 InvocationList
+```
+
+建议断点：
+
+```text
+TSharedPtr 构造和析构
+TWeakPtr::Pin
+TWeakObjectPtr::Get
+TBaseDelegate::Execute
+TMulticastDelegate::Broadcast
+```
+
+关键变量：
+
+```text
+SharedReferenceCount：共享引用计数控制块
+WeakReferenceCount：弱引用计数
+ObjectIndex / ObjectSerialNumber：TWeakObjectPtr 判断 UObject 是否仍有效
+InvocationList：多播 Delegate 保存的绑定列表
+DelegateHandle：解除绑定的句柄
+```
+
+最小调试闭环：
+
+```text
+普通 C++ 对象用 TSharedPtr 创建
+→ 复制一次看引用计数增加
+→ TWeakPtr::Pin 看对象是否还活着
+→ UObject 字段改用 UPROPERTY TObjectPtr
+→ Delegate 绑定后保存 FDelegateHandle
+→ 对象销毁前 Remove，确认不会回调悬空对象
+```
+
 ## 1. 问题背景
 
 UE 里既有 UObject 的 GC，又有普通 C++ 对象的 RAII 和引用计数，还有事件系统 Delegate。很多崩溃都来自两个误区：把 UObject 当普通 C++ 对象用智能指针管理，或者把 Delegate 绑定后不解除导致回调到已经销毁的对象。

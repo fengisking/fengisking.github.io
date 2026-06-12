@@ -1,5 +1,62 @@
 # Unreal Insights 如何 Profile
 
+## 0. 读前地图
+
+Insights 不是“打开看看哪个条最长”就结束。优秀的 Profile 流程应该是：先提出假设，再采集对应 Trace，再在 Timeline 里定位线程、任务、资源或网络瓶颈，最后回到源码验证。
+
+优先掌握的视图：
+
+```text
+Timing Insights：CPU 线程、任务和函数耗时
+Loading Insights：资源加载和 Package 事件
+Networking Insights：包、RPC、属性复制、连接流量
+Memory Insights：分配、释放和内存增长
+Bookmarks：业务埋点和关键阶段定位
+```
+
+建议源码入口：
+
+```text
+Engine/Source/Runtime/TraceLog
+Engine/Source/Runtime/Core/Public/ProfilingDebugging/CpuProfilerTrace.h
+Engine/Source/Developer/TraceInsights
+Engine/Source/Runtime/Engine/Private/NetDriver.cpp
+```
+
+关键观察项：
+
+```text
+GameThread 是否超帧
+RenderThread 是否等待
+TaskGraph 是否堆积
+AsyncLoading 是否长时间阻塞
+RPC / Property Replication 是否异常高频
+同一函数是否在多个帧里稳定占用
+```
+
+关键变量：
+
+```text
+Frame Time：一帧总耗时，先判断是否超预算
+GameThread Time：Gameplay、AI、动画等主线程压力
+RenderThread Time：渲染线程准备和提交压力
+Task Duration：异步任务执行时间和排队位置
+Load Time Event：资源加载和 Package 处理耗时
+Net Packet / RPC Count：网络包量、RPC 频率和复制压力
+Bookmark：项目自定义阶段标记
+```
+
+最小调试闭环：
+
+```text
+用 -trace=cpu,frame,bookmark,loadtime,file,net 启动
+→ 复现卡顿或带宽问题
+→ 在 Timing 里选中问题帧
+→ 从 GameThread / TaskGraph / Loading / Net 分别排除
+→ 回到对应源码或业务函数加更细 TRACE_CPUPROFILER_EVENT_SCOPE
+→ 再采集一次确认耗时下降
+```
+
 ## 1. 问题背景
 
 Unreal Insights 是 UE 的性能分析工具，可以查看 CPU、线程、任务、加载、网络、内存等 Trace 数据。它比简单 `stat unit` 更适合定位“哪一段代码慢、哪个线程卡、哪个任务排队、哪个资源加载耗时”。

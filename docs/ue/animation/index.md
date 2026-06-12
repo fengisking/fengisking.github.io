@@ -1,5 +1,41 @@
 # Animation 详解
 
+## 0. 读前地图
+
+这篇文章先建立动画源码的主线：`Update` 计算参数和权重，`Evaluate` 生成最终 Pose，Slot 把 Montage 插进 AnimGraph，Layered Blend per Bone 做局部叠加，AimOffset 本质是 Additive BlendSpace。
+
+源码入口：
+
+```text
+SkeletalMeshComponent：动画 Tick 和骨骼刷新入口
+AnimInstance：动画蓝图实例
+AnimInstanceProxy：多线程动画计算代理
+AnimNode_Slot：Montage Slot 接入点
+AnimNode_LayeredBoneBlend：局部骨骼混合
+BlendSpace / AimOffsetBlendSpace：BlendSpace 和 AimOffset
+```
+
+建议断点：
+
+```text
+USkeletalMeshComponent::TickAnimation
+UAnimInstance::UpdateAnimation
+FAnimInstanceProxy::UpdateAnimation
+FAnimInstanceProxy::Evaluate
+FAnimNode_Slot::Evaluate_AnyThread
+FAnimNode_LayeredBoneBlend::Evaluate_AnyThread
+```
+
+关键变量：
+
+```text
+FCompactPose：骨骼姿态
+FBlendedCurve：动画曲线
+SlotName：Montage 插入位置
+BranchFilters：局部混合骨骼配置
+RootMotionParams：RootMotion 输出
+```
+
 ## 1. UE 动画包含哪些方面
 
 UE 动画系统不只是 Animation Blueprint。完整动画链路包括：
@@ -292,3 +328,79 @@ Gameplay 计算 ControlRotation - ActorRotation
 ```
 
 AimOffset 抖动通常不是 AimOffset 资源本身的问题，而是 ControlRotation、ActorRotation、Mesh Rotation、网络平滑之间的参考空间不一致。
+
+## 源码精读补充：从 AnimInstance 到最终 Pose
+
+读前目标：这篇文章要让读者分清 `Update` 和 `Evaluate`，理解 Montage Slot 为什么能覆盖基础姿态，以及局部叠加、AimOffset、RootMotion 分别在哪个阶段生效。
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Animation/AnimInstance.cpp
+Engine/Source/Runtime/Engine/Private/Animation/AnimInstanceProxy.cpp
+Engine/Source/Runtime/Engine/Private/Components/SkeletalMeshComponent.cpp
+Engine/Source/Runtime/AnimGraphRuntime/Private/AnimNodes/AnimNode_Slot.cpp
+Engine/Source/Runtime/AnimGraphRuntime/Private/AnimNodes/AnimNode_LayeredBoneBlend.cpp
+```
+
+建议断点：
+
+```text
+USkeletalMeshComponent::TickAnimation
+UAnimInstance::UpdateAnimation
+FAnimInstanceProxy::UpdateAnimation
+FAnimInstanceProxy::Evaluate
+FAnimNode_Slot::Evaluate_AnyThread
+FAnimNode_LayeredBoneBlend::Evaluate_AnyThread
+```
+
+关键变量：
+
+```text
+DeltaSeconds：动画更新使用的时间步长
+FAnimInstanceProxy：多线程动画计算使用的代理数据
+FCompactPose：当前骨骼姿态
+FBlendedCurve：曲线结果，驱动表情、材质或 Gameplay 参数
+SlotName：Montage 插入到 AnimGraph 的位置
+BranchFilters：Layered Blend per Bone 的骨骼过滤配置
+RootMotionParams：Montage 或动画产生的根运动结果
+```
+
+数据流：
+
+```text
+SkeletalMeshComponent Tick
+→ AnimInstance Update 计算状态机参数和节点权重
+→ AnimGraph Evaluate 递归生成 Pose
+→ Slot 节点把 Montage 姿态混入图
+→ Layered Blend 按骨骼权重覆盖局部身体
+→ 后处理、曲线、RootMotion 输出
+→ SkeletalMeshComponent 刷新骨骼矩阵
+```
+
+伪代码精读：
+
+```cpp
+TickAnimation()
+{
+    AnimInstance->UpdateAnimation(DeltaSeconds);
+    AnimInstanceProxy->Evaluate(OutputPose);
+    ApplyRootMotionIfNeeded();
+    RefreshBoneTransforms();
+}
+```
+
+`Update` 更像“算参数和权重”，`Evaluate` 更像“按权重真正算姿态”。状态机切换条件、BlendSpace 输入、Montage 权重通常在 Update 阶段准备；最终骨骼姿态在 Evaluate 阶段生成。
+
+调试验证方法：
+
+1. 在 AnimBP 里给 Locomotion 后接一个 Slot，播放 Montage 看覆盖范围。
+2. 修改 Slot 接入位置，验证 Montage 覆盖的是接入点之后的姿态。
+3. 给 Layered Blend per Bone 配 Spine 骨骼，观察下半身是否保留移动动画。
+4. 在 AimOffset 输入处打印 `AimYaw`、`AimPitch`，确认它们和角色朝向使用同一参考空间。
+
+常见误区：
+
+- Montage 不是天然覆盖所有动画，它只在 AnimGraph 中 Slot 所在位置生效。
+- Layered Blend per Bone 不是简单裁掉骨骼，而是按骨骼层级和权重混合 Pose。
+- AimOffset 本质是 additive pose，不是单独控制骨骼朝向的逻辑脚本。

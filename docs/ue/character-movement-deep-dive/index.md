@@ -1,5 +1,40 @@
 # CharacterMovement 详解
 
+## 0. 读前地图
+
+这篇文章目标是从“一帧输入”追到“最终位移”，再追到“网络预测和校正”。不要把 CharacterMovement 理解成速度组件，它同时负责输入加速度、地面检测、碰撞移动、移动模式、RootMotion、客户端预测、服务端校正和视觉平滑。
+
+源码入口：
+
+```text
+CharacterMovementComponent.h / .cpp：移动主体
+Character.cpp：角色和 MovementComponent 的交互
+MovementComponent.h：底层 UpdatedComponent 移动接口
+PawnMovementComponent.h：输入消费和 Pawn 绑定
+```
+
+建议断点：
+
+```text
+UCharacterMovementComponent::TickComponent
+UCharacterMovementComponent::PerformMovement
+UCharacterMovementComponent::StartNewPhysics
+UCharacterMovementComponent::PhysWalking
+UCharacterMovementComponent::MoveAlongFloor
+UCharacterMovementComponent::ReplicateMoveToServer
+```
+
+关键变量：
+
+```text
+Acceleration：输入转成的加速度
+Velocity：当前真实速度
+UpdatedComponent：真正被移动的组件
+CurrentFloor：地面检测结果
+MovementMode / CustomMovementMode：物理分支
+SavedMoves：客户端预测历史
+```
+
 ## 1. 问题背景
 
 `UCharacterMovementComponent` 是 UE 里最复杂也最常用的组件之一。它不只是设置速度，而是同时负责输入加速度、地面检测、移动模式、碰撞滑动、跳跃、下落、网络预测、服务端校正、客户端平滑和 RootMotion 处理。
@@ -330,3 +365,90 @@ Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
 ```
 
 只在客户端设置一个 bool，然后本地加速度，是不够的。服务端不知道这个 bool，就会按普通移动模拟，最后通过 ClientAdjustPosition 把客户端拉回。
+
+## 源码精读补充：按一帧移动拆开阅读
+
+读前目标：读完后应该能从一次输入追到最终位移，能解释移动预测为什么需要 `FSavedMove`，也知道自定义移动时哪些状态必须进入网络同步。
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/Components/CharacterMovementComponent.cpp
+Engine/Source/Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h
+Engine/Source/Runtime/Engine/Private/Character.cpp
+```
+
+建议断点：
+
+```text
+ACharacter::Tick
+UCharacterMovementComponent::TickComponent
+UCharacterMovementComponent::PerformMovement
+UCharacterMovementComponent::StartNewPhysics
+UCharacterMovementComponent::PhysWalking
+UCharacterMovementComponent::MoveAlongFloor
+UCharacterMovementComponent::ReplicateMoveToServer
+```
+
+关键变量：
+
+```text
+Acceleration：本帧输入转成的加速度
+Velocity：移动组件维护的真实速度
+UpdatedComponent：真正被移动的组件，通常是 Capsule
+CurrentFloor：地面检测结果，决定能否 Walking
+MovementMode / CustomMovementMode：物理分支选择
+PendingLaunchVelocity：LaunchCharacter 等特殊位移入口
+SavedMoves：客户端预测后等待服务端确认的移动历史
+```
+
+一帧数据流：
+
+```text
+输入系统写入移动输入
+→ Character 消费输入向量
+→ MovementComponent 得到 Acceleration
+→ PerformMovement 进入物理更新
+→ StartNewPhysics 根据 MovementMode 分发
+→ PhysWalking / PhysFalling 计算 Velocity 和 Delta
+→ SafeMoveUpdatedComponent 移动 Capsule
+→ 命中后 StepUp / SlideAlongSurface
+→ 更新 Floor、Velocity 和网络状态
+```
+
+伪代码精读：
+
+```cpp
+PerformMovement()
+{
+    UpdateAccelerationFromInput();
+    StartNewPhysics(DeltaTime);
+    UpdateComponentVelocity();
+    SaveNetworkMoveIfNeeded();
+}
+
+StartNewPhysics()
+{
+    if (MovementMode == MOVE_Walking)
+        PhysWalking();
+    else if (MovementMode == MOVE_Falling)
+        PhysFalling();
+    else if (MovementMode == MOVE_Custom)
+        PhysCustom();
+}
+```
+
+自定义移动时，先确认你的新状态属于哪一类：只改速度参数、临时外力、还是完整自定义物理。只改速度参数通常覆写 `GetMaxSpeed` 即可；临时外力可以考虑 Launch 或 RootMotionSource；完整滑铲、攀爬、喷气飞行才需要 `MOVE_Custom` 和 `FSavedMove`。
+
+调试验证方法：
+
+1. 在 `PhysWalking` 断点，观察 `Acceleration`、`Velocity`、`MaxWalkSpeed`。
+2. 撞墙时进入 `SlideAlongSurface`，确认剩余位移如何投影。
+3. 上台阶时看 `StepUp` 返回值和 `MaxStepHeight`。
+4. 开网络模式后，在 `ReplicateMoveToServer` 看客户端保存了哪些输入。
+
+常见误区：
+
+- `SetActorLocation` 绕过 MovementComponent，会破坏预测、碰撞和校正链路。
+- `MaxWalkSpeed` 只是速度上限，不决定启动和刹车手感。
+- 自定义移动只在客户端生效，一定会被服务端校正拉回。

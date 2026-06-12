@@ -1,5 +1,39 @@
 # UE 反射详解
 
+## 0. 读前地图
+
+这篇文章要解决的是：C++ 本身没有完整运行时反射，UE 为什么还能做到编辑器属性、蓝图调用、序列化、GC 引用发现和 RPC。读源码时先抓住一条链：宏只是标记，UHT 负责解析和生成代码，运行时注册成 `UClass`、`FProperty`、`UFunction`。
+
+源码入口：
+
+```text
+UnrealHeaderTool：解析 UCLASS / UPROPERTY / UFUNCTION
+ObjectMacros.h：宏和标记定义
+Class.h / Class.cpp：UClass、UStruct、UFunction、FProperty
+UObjectGlobals.cpp：对象创建和注册入口
+PropertyTag.cpp：属性序列化
+```
+
+建议断点：
+
+```text
+StaticClass
+StaticAllocateObject
+UClass::CreateDefaultObject
+UObject::Serialize
+FProperty::SerializeItem
+```
+
+关键变量：
+
+```text
+UClass：类的运行时元数据
+FProperty：字段描述和偏移
+UFunction：可反射调用的函数描述
+ClassDefaultObject：默认值来源
+PropertyFlags：决定属性参与哪些系统
+```
+
 ## 1. 问题背景
 
 UE 的反射系统解决的是 C++ 原生语言缺失运行时类型信息、属性遍历、序列化、编辑器暴露、蓝图调用、网络复制、GC 引用发现等能力的问题。普通 C++ 的类在编译后基本只剩机器码，运行时无法直接知道一个对象有哪些属性、某个函数能不能被名字调用、某个属性是否应该保存到磁盘。UE 通过 UHT 和 generated 代码，在 C++ 编译前生成一套元数据，把类型信息保存到 `UClass`、`FProperty`、`UFunction` 等对象里。
@@ -303,3 +337,76 @@ Engine/Source/Runtime/CoreUObject/Private/UObject/PropertyTag.cpp
 ```
 
 如果一个字段没有 `UPROPERTY`，默认通用序列化不会知道它存在。你可以手写 `Serialize` 处理它，但那就变成这个类自己的特殊逻辑，无法自动获得编辑器、复制、GC 等通用能力。
+
+## 源码精读补充：按断点把反射跑通
+
+读前目标：这篇文章最后要能回答三个问题：`UCLASS` 怎么变成运行时 `UClass`，`.generated.h` 解决了什么问题，属性系统为什么能同时服务编辑器、序列化、GC 和网络复制。
+
+源码位置：
+
+```text
+Engine/Source/Programs/UnrealHeaderTool/Private
+Engine/Source/Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+Engine/Source/Runtime/CoreUObject/Public/UObject/Class.h
+Engine/Source/Runtime/CoreUObject/Private/UObject/Class.cpp
+Engine/Source/Runtime/CoreUObject/Private/UObject/UObjectGlobals.cpp
+```
+
+建议断点：
+
+```text
+UHT 侧：FHeaderParser::ParseClassDeclaration
+运行时：UClass::StaticClass
+运行时：StaticAllocateObject
+运行时：UObject::Serialize
+属性侧：FProperty::SerializeItem
+```
+
+关键变量：
+
+```text
+UClass：运行时类型对象，保存父类、函数链、属性链和 ClassFlags
+FProperty：字段描述，不是字段值本身
+UFunction：函数的反射描述，RPC 和蓝图调用都会用到
+EClassFlags / EPropertyFlags：决定类和属性能参与哪些系统
+ClassDefaultObject：类默认对象，构造默认值和对象初始化都会依赖它
+```
+
+完整数据流可以这样理解：
+
+```text
+.h 里的 UCLASS / UPROPERTY / UFUNCTION
+→ UHT 解析宏标记和 C++ 声明
+→ 生成 .generated.h / .gen.cpp
+→ 编译期把注册代码编进模块
+→ 模块加载时注册 UClass / UFunction / FProperty
+→ 运行时系统通过 UClass 找属性、函数和元数据
+```
+
+伪代码精读：
+
+```cpp
+// 不是 UE 原始源码，只保留关键意图
+RegisterClass()
+{
+    UClass* Class = ConstructUClass(...);
+    Class->LinkChildProperties();
+    Class->CreateDefaultObject();
+    AddClassToGlobalObjectArray(Class);
+}
+```
+
+这里最重要的是 `LinkChildProperties` 和 `CreateDefaultObject`。前者让属性链可以被遍历，后者让 UE 有一份稳定的默认值来源。很多“为什么改了构造函数默认值资源里没变”的问题，本质都和 CDO、序列化覆盖、蓝图生成类的默认值层级有关。
+
+调试验证方法：
+
+1. 新建一个带 `UPROPERTY(EditAnywhere)` 的 Actor。
+2. 编译后打开生成目录，查看对应 `.generated.h` 里生成了哪些声明。
+3. 在 `StaticAllocateObject` 断点，看 Actor 创建时传入的 `UClass`。
+4. 在 `UObject::Serialize` 断点，看属性保存和加载是否通过 `FProperty` 链路进入。
+
+常见误区：
+
+- `.generated.h` 不是可选文件，它把 UHT 看到的信息接回 C++ 编译体系。
+- `UPROPERTY` 不是只给蓝图用，它同时影响 GC、序列化、复制、编辑器显示和资产引用分析。
+- 反射描述的是“类型和字段结构”，对象里的实际值仍然存放在 UObject 实例内存里。

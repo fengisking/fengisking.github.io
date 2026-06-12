@@ -1,5 +1,52 @@
 # Navigation 详解
 
+## 0. 读前地图
+
+这篇文章的目标不是背 API，而是把“AI 为什么能从 A 点走到 B 点”拆成四层：导航数据如何生成，路径如何查询，PathFollowing 如何驱动移动，运行时如何优化和排查。
+
+优先阅读源码：
+
+```text
+NavigationSystem：负责导航系统入口、路径查询、导航数据管理
+RecastNavMesh：负责 NavMesh 数据和 Detour 查询
+AIController::MoveTo：Gameplay 层最常见入口
+PathFollowingComponent：负责沿路径推进、到点判定、失败处理
+CharacterMovementComponent：真正执行角色移动
+```
+
+建议断点：
+
+```text
+AAIController::MoveTo
+UNavigationSystemV1::FindPathSync
+ARecastNavMesh::FindPath
+UPathFollowingComponent::RequestMove
+UPathFollowingComponent::FollowPathSegment
+UPathFollowingComponent::OnPathFinished
+```
+
+关键变量：
+
+```text
+FNavAgentProperties：AI 的半径、高度和导航能力
+FPathFindingQuery：一次寻路请求的完整上下文
+FNavigationPath：查询结果路径
+FNavPathPoint：路径上的拐点
+FAIMoveRequest：MoveTo 的目标、半径、是否允许部分路径
+PathFollowingStatus：Idle、Waiting、Paused、Moving
+```
+
+最小调试闭环：
+
+```text
+在场景里打开 Show Navigation
+→ 调 AIController::MoveTo
+→ 断到 FindPathSync 看 Query
+→ 断到 RecastNavMesh::FindPath 看是否找到多边形路径
+→ 断到 FollowPathSegment 看每帧期望方向
+→ 断到 OnPathFinished 看成功、阻塞还是路径无效
+```
+
 ## 1. 问题背景
 
 UE Navigation 解决 AI 在复杂地图中“从当前位置走到目标位置”的问题。它不是简单直线移动，而是先构建可行走区域，再用寻路算法找路径，最后由移动组件沿路径移动。大世界、动态障碍、多人怪物、飞行单位都会让导航系统变复杂。

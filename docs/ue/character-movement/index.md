@@ -1,5 +1,51 @@
 # UE CharacterMovement 源码阅读：MaxWalkSpeed 到底在哪里生效
 
+## 0. 读前地图
+
+这篇文章用一个具体项目问题读 CharacterMovement：为什么改了 `MaxWalkSpeed`，角色当前速度不一定立刻变成目标速度。先给结论：`MaxWalkSpeed` 是速度上限，不是当前速度赋值；当前速度由 `Acceleration`、`Friction`、`Braking`、`MovementMode`、RootMotion 和网络预测共同决定。
+
+源码入口：
+
+```text
+UCharacterMovementComponent::TickComponent
+UCharacterMovementComponent::PerformMovement
+UCharacterMovementComponent::StartNewPhysics
+UCharacterMovementComponent::PhysWalking
+UCharacterMovementComponent::CalcVelocity
+UCharacterMovementComponent::GetMaxSpeed
+```
+
+建议断点：
+
+```text
+SetGaitType 或项目步态切换函数
+UCharacterMovementComponent::GetMaxSpeed
+UCharacterMovementComponent::CalcVelocity
+UCharacterMovementComponent::ApplyVelocityBraking
+UCharacterMovementComponent::UpdateComponentVelocity
+```
+
+关键变量：
+
+```text
+MaxWalkSpeed：Walking 速度上限
+Velocity：当前真实速度
+Acceleration：输入或 AI 移动请求产生的加速度
+GroundFriction：转向和刹车的重要参数
+BrakingDecelerationWalking：停止输入后的减速度
+MovementMode：决定 GetMaxSpeed 取哪个速度上限
+```
+
+最小验证实验：
+
+```text
+角色以 Sprint 速度移动
+→ 只把 MaxWalkSpeed 改成 Walk
+→ 观察 Velocity 是否立刻降到 Walk
+→ 再手动按当前方向修正 Velocity
+→ 对比动画状态和实际位移是否一致
+```
+
 ## 1. 问题背景
 
 在做角色、机甲或 AI 自动跑测时，经常会设置：

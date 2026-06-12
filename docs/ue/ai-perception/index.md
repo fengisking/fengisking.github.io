@@ -1,5 +1,53 @@
 # UE AI Perception：死亡复活后感知为什么不刷新
 
+## 0. 读前地图
+
+这篇文章不是泛讲 AI Perception，而是用“死亡复活后不重新触发感知”这个具体问题带读源码。核心结论是：Perception 不是每帧看见目标就广播，它维护的是刺激状态和感知缓存。复活如果没有制造“状态边沿变化”，外层逻辑就可能收不到新的感知事件。
+
+优先阅读源码：
+
+```text
+UAIPerceptionComponent：AI 身上的感知组件
+UAIPerceptionSystem：全局感知更新调度
+UAISense_Sight：视觉感知逻辑
+UAIPerceptionStimuliSourceComponent：目标注册刺激源
+FActorPerceptionInfo：某个 Actor 的感知缓存
+FAIStimulus：一次刺激数据
+```
+
+建议断点：
+
+```text
+UAIPerceptionComponent::OnRegister
+UAIPerceptionSystem::Tick
+UAISense_Sight::Update
+UAIPerceptionComponent::ProcessStimuli
+UAIPerceptionComponent::HandleExpiredStimulus
+UAIPerceptionComponent::ForgetActor
+```
+
+关键变量：
+
+```text
+PerceptualData：Actor 到感知信息的缓存表
+LastSensedStimuli：各 Sense 的最近刺激
+bSuccessfullySensed：当前刺激是否有效感知
+ExpirationAge：刺激过期时间
+StimuliSource：目标是否仍注册为可感知源
+OnTargetPerceptionUpdated：外部最常用事件，但不是每帧广播
+```
+
+最小调试闭环：
+
+```text
+AI 第一次看见玩家
+→ 玩家死亡但 Actor 不销毁
+→ 查看 PerceptualData 是否仍有玩家
+→ 玩家复活
+→ 断到 ProcessStimuli 看有没有新 Stimulus
+→ 如果没有边沿变化，测试 ForgetActor 或重新注册 StimuliSource
+```
+
 ## 1. 问题背景
 
 在项目里经常会遇到这样的现象：

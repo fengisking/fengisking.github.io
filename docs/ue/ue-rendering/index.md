@@ -1,5 +1,54 @@
 # UE 渲染详解
 
+## 0. 读前地图
+
+这篇文章按“能改哪里”来读渲染源码，而不是从图形学概念平铺。项目里想改画风，通常有五个入口：材质、后处理、光照模型、渲染 Pass、资源和 Shader 管线。越靠后成本越高，越需要引擎源码能力。
+
+优先阅读源码：
+
+```text
+PrimitiveComponent / SceneProxy：Gameplay 对象进入渲染世界
+SceneVisibility：裁剪和可见性
+BasePassRendering：基础几何 Pass
+DeferredShadingRenderer：延迟渲染主流程
+PostProcess：后处理链路
+Material / ShaderCompiler：材质和 Shader 编译
+RDG / RHI：Render Graph 和底层图形接口
+```
+
+建议断点：
+
+```text
+UPrimitiveComponent::CreateSceneProxy
+FScene::AddPrimitive
+FDeferredShadingSceneRenderer::Render
+InitViews
+RenderBasePass
+AddPostProcessingPasses
+FMaterial::CacheShaders
+```
+
+关键变量：
+
+```text
+FPrimitiveSceneProxy：游戏线程组件在渲染线程的代理
+FMeshBatch：一次可提交绘制的网格数据
+FViewInfo：相机视图和裁剪结果
+FRDGBuilder：Render Graph 构建器
+FSceneTextures：GBuffer、Depth、SceneColor 等场景纹理
+FMaterialShaderMap：材质对应的 Shader 集合
+```
+
+二次元风格最小路径：
+
+```text
+先用材质和贴图控制基础色块
+→ 用后处理做描边、色阶、阴影分层
+→ 需要更稳定的卡通光照时改 Shading Model
+→ 需要特殊 Pass 时接入 Renderer / RDG
+→ 用 Insights / RenderDoc 验证 Pass 成本
+```
+
 ## 1. 问题背景
 
 UE 渲染系统负责把场景对象、材质、灯光、阴影、后处理、特效和 UI 组合成最终画面。做项目时常见问题不是“渲染管线是什么”，而是“哪些东西能改，改哪里，成本是什么，怎么做成自己的风格”。
