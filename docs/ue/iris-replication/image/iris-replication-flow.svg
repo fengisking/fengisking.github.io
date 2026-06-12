@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">Iris Replication 链路</title>
+  <desc id="desc">对象通过 ReplicationBridge 接入 Iris，生成 NetRefHandle 和 Protocol，再经过 Filter、Prioritizer 和 SendUpdate 同步到连接。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">Iris Replication 链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="15" fill="#1f2933">
+    <rect x="48" y="108" width="115" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="82" y="147">Object</text>
+    <rect x="198" y="108" width="135" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="224" y="147">Bridge</text>
+    <rect x="368" y="108" width="135" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="398" y="136">NetRef</text><text x="400" y="156">Handle</text>
+    <rect x="538" y="108" width="135" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="570" y="136">Filter /</text><text x="562" y="156">Prioritizer</text>
+    <rect x="708" y="108" width="135" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="742" y="147">SendUpdate</text>
+    <path d="M163 142h35M333 142h35M503 142h35M673 142h35" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="210" y="236" fill="#52606d">Iris 的排查重点是对象是否接入、是否被过滤、优先级是否过低</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

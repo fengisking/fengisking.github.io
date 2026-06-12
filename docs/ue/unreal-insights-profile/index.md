@@ -57,6 +57,57 @@ Bookmark：项目自定义阶段标记
 → 再采集一次确认耗时下降
 ```
 
+## 进阶补充：Gameplay、Memory、Networking、Loading Insights 和自定义 Trace
+
+源码位置：
+
+```text
+Engine/Source/Runtime/TraceLog
+Engine/Source/Runtime/Core/Public/ProfilingDebugging/CpuProfilerTrace.h
+Engine/Source/Developer/TraceInsights
+Engine/Source/Runtime/Engine/Private/NetDriver.cpp
+Engine/Source/Runtime/CoreUObject/Private/Serialization/AsyncLoading2.cpp
+```
+
+`Timing Insights` 适合看 CPU 时间线，但深入项目时还要补几个视图。
+
+`Gameplay Insights` 适合看 Gameplay 事件、Actor、组件、动画、Ability 或项目自定义事件的时间关系。它能把“哪段业务逻辑导致卡顿”从纯函数耗时提升到玩法上下文。
+
+`Memory Insights` 适合查内存增长、峰值、泄漏嫌疑和分配热点。它比只看任务管理器更能定位到分配调用栈。
+
+`Networking Insights` 适合查 RPC、属性复制、包大小、连接带宽和突增流量。网络问题不要只看 `stat net`，要结合具体对象和事件。
+
+`Loading Insights` 适合查地图切换、资源加载、同步加载和包处理。进入地图卡顿、打开 UI 卡顿、第一次播放特效卡顿，都应该看这里。
+
+自定义 Trace 是把业务阶段写进时间线：
+
+```cpp
+TRACE_CPUPROFILER_EVENT_SCOPE(MySystem_UpdateTargets);
+```
+
+建议项目里给这些阶段加埋点：
+
+```text
+AI 上下文采样
+Utility 评分
+目标选择
+技能释放
+PCG 生成
+资源预加载
+撤离流程
+```
+
+排查闭环：
+
+```text
+先用 stat unit 确认 CPU / GPU / Draw 哪个方向
+→ 用 Insights 选中问题帧
+→ 用 Bookmark 找业务阶段
+→ 用具体视图定位线程、加载、网络或内存
+→ 加更细 Trace
+→ 修复后重新采集对比
+```
+
 ## 1. 问题背景
 
 Unreal Insights 是 UE 的性能分析工具，可以查看 CPU、线程、任务、加载、网络、内存等 Trace 数据。它比简单 `stat unit` 更适合定位“哪一段代码慢、哪个线程卡、哪个任务排队、哪个资源加载耗时”。

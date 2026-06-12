@@ -472,3 +472,38 @@ ServerMove()
 - Reliable 只保证可靠送达和顺序，不保证“立即到达”，也不适合高频输入。
 - Unreliable 不是低质量 RPC，适合可丢弃、下一帧会覆盖的数据。
 - DS 优化不是只优化网络包，还要看服务器 Tick、寻路、碰撞和 AI 计算。
+
+## 进阶补充：Iris、Replication Graph、FastArray 和 Network Prediction
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/ActorReplication.cpp
+Engine/Source/Runtime/Engine/Private/Net/ReplicationGraph.cpp
+Engine/Source/Runtime/Net/Core/Classes/Net/Serialization/FastArraySerializer.h
+Engine/Plugins/Runtime/NetworkPrediction/Source
+Engine/Source/Runtime/Experimental/Iris/Core
+```
+
+如果项目网络对象数量开始变大，只理解 RPC 不够，还要补四个方向。
+
+`FastArraySerializer` 适合复制“数组里少量元素变化”的数据，比如背包、Buff 列表、目标列表、技能计数。它避免整个数组每次都全量复制，而是记录元素增删改。
+
+`Replication Graph` 适合大量 Actor 的相关性优化。它把 Actor 按空间、队伍、连接、玩法规则组织起来，减少每个连接每帧遍历所有 Actor 的成本。
+
+`Iris` 是新一代复制框架，重点是 `NetRefHandle`、`ReplicationProtocol`、`Filter` 和 `Prioritizer`。它更适合做大规模对象复制的统一调度，但迁移成本比传统复制高。
+
+`Network Prediction` 插件适合做强预测需求的玩法，比如载具、冲刺、特殊移动。它把输入、模拟、回滚、校正抽象成更明确的模型。
+
+调试顺序建议：
+
+```text
+先用 stat net / Network Insights 找高频对象
+→ 判断是 RPC 过多、属性复制过多，还是 Actor 相关性过宽
+→ 数组类状态先考虑 FastArray
+→ 大量 Actor 先考虑 Replication Graph
+→ 新系统或大规模同步再评估 Iris
+→ 强手感移动再看 Network Prediction
+```
+
+不要一开始就把所有系统迁移到 Iris。更稳的做法是先挑低风险系统做对比，例如掉落物、地图事件、远处怪物代理或跑测统计状态。

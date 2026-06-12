@@ -47,6 +47,46 @@ SoftObjectPath：软引用路径，是否进包取决于收集规则
 → 用打包产物验证运行时加载
 ```
 
+## 进阶补充：IoStore、Zen Loader、AssetRegistry、DLC、Patch 和 Chunk
+
+源码位置：
+
+```text
+Engine/Source/Runtime/CoreUObject/Private/Serialization/AsyncLoading2.cpp
+Engine/Source/Runtime/AssetRegistry
+Engine/Source/Runtime/Engine/Private/AssetManager.cpp
+Engine/Source/Runtime/PakFile
+Engine/Source/Runtime/IOStore
+Engine/Source/Programs/AutomationTool
+```
+
+`IoStore` 是 UE 现代资源打包和加载的重要路径，通常会生成 `.utoc` 和 `.ucas`。它替代传统 Pak 的部分职责，配合异步加载和容器化资源管理。
+
+`Zen Loader` 和 `AsyncLoading2` 关注运行时资源加载链路。包体能启动但进入地图卡顿，往往要从加载事件、依赖、同步加载和 IO 容器里查。
+
+`AssetRegistry` 是运行时查找资源的重要索引。Cook 后的 AssetRegistry 决定运行时能不能发现某些资源路径和资产信息。
+
+`PrimaryAssetLabel` 和 `AssetManager` 是软引用资源进包的关键。只靠字符串路径动态加载资源，很容易编辑器可用、打包丢失。
+
+`DLC / Patch / Hotfix / Chunk` 关注发布后资源分发：
+
+```text
+Chunk：把资源分组到不同安装包或下载包。
+Patch：基于旧版本生成差异更新。
+DLC：额外内容包。
+Hotfix：小范围配置或资源修复。
+```
+
+排查顺序：
+
+```text
+资源没进包：看 AssetManager、PrimaryAsset、Cook 列表。
+资源进包但找不到：看 AssetRegistry 和路径。
+资源加载慢：看 Loading Insights、AsyncLoading2、同步加载。
+包体过大：看 Chunk、引用链和未裁剪编辑器数据。
+补丁异常：看版本基线、Chunk 归属和资源重定向。
+```
+
 ## 1. 问题背景
 
 UE 打包不是简单把工程复制出去。它包含编译、Cook、Stage、Package、Archive 等阶段。很多线上资源缺失、蓝图类找不到、软引用没打进去、平台配置不一致的问题，都出在 Cook 和资源引用关系上。

@@ -48,6 +48,45 @@ FHitResult：命中点、法线、组件、骨骼、穿透信息
 → 看 FHitResult 是否 bBlockingHit 或 bStartPenetrating
 ```
 
+## 进阶补充：Chaos Vehicle、Physical Animation、Constraint、Async Physics 和 Network Physics
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Experimental/Chaos
+Engine/Plugins/Experimental/ChaosVehiclesPlugin
+Engine/Source/Runtime/Engine/Private/PhysicsEngine
+Engine/Source/Runtime/Engine/Classes/PhysicsEngine/PhysicsConstraintComponent.h
+Engine/Source/Runtime/Engine/Classes/PhysicsEngine/PhysicalAnimationComponent.h
+```
+
+`Chaos Vehicle` 用于车辆物理。它不是简单 CharacterMovement 换皮，而是轮胎、悬挂、摩擦、驱动、制动和物理场景共同决定结果。机甲载具、战舰炮台移动平台、轮式单位都可以参考它的建模方式。
+
+`Physical Animation` 用于动画和物理混合。常见于受击、布娃娃、局部物理反应。它的关键是骨骼约束、物理资产和动画目标之间的拉扯。
+
+`Constraint` 解决两个刚体之间的约束关系，比如铰链、弹簧、限位、机械臂、炮塔转轴。调试 Constraint 要看参考坐标系、角度限制、驱动力和质量比例。
+
+`Async Physics` 把物理模拟和 GameThread 解耦，能提升性能，但会带来读写状态不同步、回调时机和网络校正复杂度。
+
+`Network Physics` 关注物理对象在网络下的预测、校正和同步。普通 Replication 很难让高速刚体在多人下稳定一致，需要专门的预测和权威策略。
+
+`ProjectileMovement` 和物理模拟也要分清：
+
+```text
+ProjectileMovement：Gameplay 层可控，适合子弹、导弹、抛射物。
+Simulate Physics：交给物理场景，适合真实刚体。
+高速命中：需要 Sweep、CCD 或自定义命中检测。
+```
+
+排查建议：
+
+```text
+角色卡住：先看碰撞响应和 Sweep。
+刚体抖动：看质量、约束、物理步长和穿透修正。
+命中丢失：看速度、DeltaTime、CCD、Sweep。
+网络不同步：看谁是权威、是否预测、是否频繁校正。
+```
+
 ## 1. 问题背景
 
 UE 的碰撞系统用于查询、阻挡、触发和物理模拟。Gameplay 里大部分问题都和碰撞有关：子弹打不到、角色卡住、Overlap 不触发、Sweep 结果不对、物理对象抖动、Trace Channel 配错。UE5 使用 Chaos 作为物理系统。

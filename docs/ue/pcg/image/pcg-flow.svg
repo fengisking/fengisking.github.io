@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">PCG 数据流</title>
+  <desc id="desc">PCGComponent 触发 Graph，节点处理 PointData 和 Metadata，最终生成 Gameplay 或美术结果。</desc>
+  <rect width="960" height="300" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">PCG 数据流</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1b2638">
+    <rect x="58" y="108" width="145" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="86" y="147">PCGComponent</text>
+    <rect x="248" y="108" width="120" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="274" y="147">Graph</text>
+    <rect x="413" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="450" y="147">PointData</text>
+    <rect x="588" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="623" y="147">Metadata</text>
+    <rect x="763" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#7aa2e3"/><text x="796" y="147">Spawn</text>
+    <path d="M203 142h45M368 142h45M543 142h45M718 142h45" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="248" y="236" fill="#52606d">可跑测 PCG 的关键是固定 Seed、记录 Graph 版本和结构化 Metadata</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

@@ -41,13 +41,18 @@ export default defineConfig({
             { text: 'CharacterMovement 详解', link: '/ue/character-movement-deep-dive/' },
             { text: 'CharacterMovement 源码阅读', link: '/ue/character-movement/' },
             { text: 'Navigation 详解', link: '/ue/navigation/' },
-            { text: 'AI Perception 源码阅读', link: '/ue/ai-perception/' }
+            { text: 'AI Perception 源码阅读', link: '/ue/ai-perception/' },
+            { text: 'GAS 详解', link: '/ue/gas/' },
+            { text: 'PCG 详解', link: '/ue/pcg/' },
+            { text: 'SmartObject / GameplayInteraction 详解', link: '/ue/smart-object-gameplay-interaction/' },
+            { text: 'MassEntity / MassAI 详解', link: '/ue/mass-entity-ai/' }
           ]
         },
         {
           text: '网络、动画和表现',
           items: [
             { text: 'DS 和 RPC 详解', link: '/ue/ds-rpc/' },
+            { text: 'Iris Replication 详解', link: '/ue/iris-replication/' },
             { text: 'Animation 详解', link: '/ue/animation/' },
             { text: 'UE 渲染详解', link: '/ue/ue-rendering/' },
             { text: 'Physics 和 Collision 详解', link: '/ue/physics-collision/' }

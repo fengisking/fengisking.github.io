@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">MassEntity 数据导向链路</title>
+  <desc id="desc">Entity 作为 ID，Fragment 保存数据，Processor 批量查询并处理，Representation 输出表现。</desc>
+  <rect width="960" height="300" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">MassEntity 数据导向链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1b2638">
+    <rect x="70" y="110" width="130" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="110" y="149">Entity</text>
+    <rect x="250" y="110" width="140" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="286" y="149">Fragment</text>
+    <rect x="440" y="110" width="140" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="472" y="149">Processor</text>
+    <rect x="630" y="110" width="150" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="660" y="149">EntityQuery</text>
+    <rect x="830" y="110" width="90" height="66" rx="8" fill="#fff" stroke="#5e9c76"/><text x="844" y="149">表现</text>
+    <path d="M200 143h50M390 143h50M580 143h50M780 143h50" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="238" y="235" fill="#52606d">大量实体的逻辑通过 Chunk 批处理，而不是每个 Actor 单独 Tick</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

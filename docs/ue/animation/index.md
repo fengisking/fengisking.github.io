@@ -406,3 +406,39 @@ TickAnimation()
 - Montage 不是天然覆盖所有动画，它只在 AnimGraph 中 Slot 所在位置生效。
 - Layered Blend per Bone 不是简单裁掉骨骼，而是按骨骼层级和权重混合 Pose。
 - AimOffset 本质是 additive pose，不是单独控制骨骼朝向的逻辑脚本。
+
+## 进阶补充：Motion Matching、Pose Search、Chooser、Control Rig 和 Motion Warping
+
+源码位置：
+
+```text
+Engine/Plugins/Animation/PoseSearch/Source
+Engine/Plugins/Animation/MotionWarping/Source
+Engine/Plugins/Animation/ControlRig/Source
+Engine/Plugins/Animation/IKRig/Source
+Engine/Plugins/Chooser/Source
+```
+
+现代 UE 动画深入需要补五个方向。
+
+`Motion Matching` 的核心是从动画数据库里按当前运动需求搜索最合适的 Pose，而不是手写大量状态机过渡。它依赖 Pose Search，把速度、朝向、轨迹、骨骼特征编码成可查询特征。
+
+`Chooser` 更像数据驱动选择器。它适合根据武器、状态、角色类型、地形、速度选择动画、技能或配置。它能减少蓝图里大量 `if/else` 和状态枚举分支。
+
+`Control Rig` 用于运行时或编辑器内的程序化骨骼控制。它适合机械臂、武器挂点、脚部 IK、特殊瞄准修正和动画工具链。
+
+`IK Rig / IK Retargeter` 解决不同骨架之间的动画重定向，也能在运行时做局部 IK 修正。
+
+`Motion Warping` 解决动画 RootMotion 和真实目标位置不匹配的问题。例如处决、冲刺攻击、翻越、近战吸附，动画可以被扭曲到目标点。
+
+学习顺序建议：
+
+```text
+先掌握 AnimGraph Update / Evaluate
+→ 再看 Montage Slot 和 Layered Blend
+→ 再看 Motion Warping 解决 RootMotion 对齐
+→ 再看 Pose Search / Motion Matching
+→ 最后用 Chooser 做动画选择数据化
+```
+
+项目里如果机甲有冲刺斩、处决、登舰、炮台操作，优先研究 Motion Warping 和 Control Rig；如果要做大量人形移动动画切换，再研究 Motion Matching。

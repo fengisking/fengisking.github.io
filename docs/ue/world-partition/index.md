@@ -49,6 +49,43 @@ HLODLayer：远景替代资源配置
 → 检查对应 Actor 的 BeginPlay / EndPlay 是否符合预期
 ```
 
+## 进阶补充：HLOD、Data Layer、OFPA、Builder Commandlet 和多人流送
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Engine/Private/WorldPartition
+Engine/Source/Runtime/Engine/Private/WorldPartition/HLOD
+Engine/Source/Runtime/Engine/Private/DataLayer
+Engine/Source/Editor/UnrealEd/Private/WorldPartition
+```
+
+`HLOD` 解决远处大量 Actor 的表现成本。它会把远处对象合并成更便宜的代理资源。调试 HLOD 时要关注构建版本、Cell 状态、材质合并和碰撞是否需要保留。
+
+`Data Layer` 用来控制一批 Actor 的逻辑层级，例如任务阶段、昼夜版本、破坏前后状态、不同玩法模式。它不是空间流送，而是玩法条件控制。
+
+`One File Per Actor` 让每个 Actor 独立保存，方便多人协作和版本管理。缺点是文件数量变多，提交和资源管理要更规范。
+
+`World Partition Builder Commandlet` 用于命令行构建 HLOD、Minimap、Resave Actors 等，是自动化构建大世界项目必须掌握的工具。
+
+多人项目里要注意：
+
+```text
+客户端可以按自己 Streaming Source 加载视觉世界。
+服务端是否加载某个区域，取决于服务器逻辑和 Actor 需求。
+任务状态、AI、碰撞、掉落物不能只依赖客户端流送。
+Data Layer 状态需要网络一致性设计。
+```
+
+调试建议：
+
+```text
+先确认 Runtime Cell 状态
+→ 再确认 Data Layer 是否启用
+→ 再确认 HLOD 是否替代了原 Actor
+→ 最后确认服务器和客户端是否加载了同一批 Gameplay 关键对象
+```
+
 ## 1. 问题背景
 
 World Partition 用于大世界流式加载。传统关卡需要手动拆子关卡，World Partition 把世界按网格划分，根据玩家位置、Streaming Source、Data Layer 等规则自动加载和卸载 Actor。

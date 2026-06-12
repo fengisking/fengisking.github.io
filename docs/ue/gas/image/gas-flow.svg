@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">GAS 技能执行链路</title>
+  <desc id="desc">ASC 激活 Ability，Ability 提交消耗和冷却，GameplayEffect 修改 Attribute 和 Tag，GameplayCue 播放表现。</desc>
+  <rect width="960" height="300" fill="#f6f8fb"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1b2638">GAS 技能执行链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1b2638">
+    <rect x="64" y="108" width="120" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="106" y="147">ASC</text>
+    <rect x="224" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="256" y="147">Ability</text>
+    <rect x="394" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="428" y="147">Commit</text>
+    <rect x="564" y="108" width="150" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="594" y="136">Gameplay</text><text x="616" y="156">Effect</text>
+    <rect x="754" y="108" width="140" height="68" rx="8" fill="#fff" stroke="#5e9c76"/><text x="792" y="136">Attribute</text><text x="808" y="156">Tag</text>
+    <path d="M184 142h40M354 142h40M524 142h40M714 142h40" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="248" y="236" fill="#52606d">GAS 的核心是让技能、属性、状态、表现和网络预测走统一入口</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

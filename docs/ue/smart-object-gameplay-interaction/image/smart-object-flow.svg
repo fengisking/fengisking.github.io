@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">SmartObject 交互链路</title>
+  <desc id="desc">SmartObject 注册后被查询、占用、使用并释放，GameplayInteraction 定义使用时的行为。</desc>
+  <rect width="960" height="300" fill="#f7fafc"/>
+  <text x="48" y="52" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="28" font-weight="700" fill="#1f2933">SmartObject 交互链路</text>
+  <g font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" fill="#1f2933">
+    <rect x="55" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#c58b44"/><text x="88" y="147">注册</text>
+    <rect x="225" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#c58b44"/><text x="258" y="147">查询</text>
+    <rect x="395" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#c58b44"/><text x="428" y="147">Claim</text>
+    <rect x="565" y="108" width="150" height="68" rx="8" fill="#fff" stroke="#c58b44"/><text x="596" y="147">Interaction</text>
+    <rect x="755" y="108" width="130" height="68" rx="8" fill="#fff" stroke="#c58b44"/><text x="788" y="147">Release</text>
+    <path d="M185 142h40M355 142h40M525 142h40M715 142h40" stroke="#486581" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="214" y="236" fill="#52606d">Slot 是可占用资源，GameplayInteraction 是占用后执行的行为</text>
+  </g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#486581"/></marker></defs>
+</svg>

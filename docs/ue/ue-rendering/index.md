@@ -51,6 +51,46 @@ FMaterialShaderMap：材质对应的 Shader 集合
 → 用 Insights / RenderDoc 验证 Pass 成本
 ```
 
+## 进阶补充：Nanite、Lumen、VSM、TSR、RDG、Shader 编译和 PSO
+
+源码位置：
+
+```text
+Engine/Source/Runtime/Renderer/Private/Nanite
+Engine/Source/Runtime/Renderer/Private/Lumen
+Engine/Source/Runtime/Renderer/Private/VirtualShadowMaps
+Engine/Source/Runtime/Renderer/Private/PostProcess
+Engine/Source/Runtime/RenderCore/Public/RenderGraphBuilder.h
+Engine/Source/Runtime/ShaderCore
+Engine/Source/Runtime/RHI
+```
+
+渲染深入建议按“画面特性”和“工程成本”两条线读。
+
+`Nanite` 解决高面数几何的可见性、集群裁剪和虚拟化几何渲染。它影响模型制作规范、材质复杂度、透明物体和特殊渲染路径。
+
+`Lumen` 解决动态全局光照和反射。调风格化渲染时要特别注意 Lumen 对暗部、间接光和反射的影响，否则二次元色阶容易被真实光照冲淡。
+
+`Virtual Shadow Maps` 解决高质量虚拟阴影，代价是显存、缓存和页面更新成本。大量动态物体和复杂光源会让 VSM 成为瓶颈。
+
+`TSR` 是时域超分和抗锯齿方案。它对运动矢量、透明、粒子、描边后处理都敏感。做二次元描边时，需要检查 TSR 后是否拖影。
+
+`RDG` 是现代 UE 渲染 Pass 组织方式。新增 Pass 时应优先理解 `FRDGBuilder`、资源生命周期、Pass 参数和 RenderGraph 可视化。
+
+`Shader 编译和 PSO` 是工程化重点。卡顿不一定来自渲染计算，也可能来自运行时 Shader 或 Pipeline State 创建。
+
+调试建议：
+
+```text
+用 RenderDoc 看 Pass 和纹理
+→ 用 Unreal Insights 看 RenderThread / RHIThread
+→ 用 stat gpu 找 GPU Pass
+→ 用 ShaderPipelineCache 排查 PSO 卡顿
+→ 用 RDG Dump 看资源和 Pass 依赖
+```
+
+做二次元风格时，优先路线仍然是材质和后处理。只有当光照模型、阴影或 GBuffer 信息不够用时，再考虑改 Shading Model 或 Renderer。
+
 ## 1. 问题背景
 
 UE 渲染系统负责把场景对象、材质、灯光、阴影、后处理、特效和 UI 组合成最终画面。做项目时常见问题不是“渲染管线是什么”，而是“哪些东西能改，改哪里，成本是什么，怎么做成自己的风格”。
